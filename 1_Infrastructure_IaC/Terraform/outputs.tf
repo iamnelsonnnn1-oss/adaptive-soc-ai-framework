@@ -121,3 +121,12 @@ output "default_resource_tags" {
     DataClassification   = var.data_classification
   })
 }
+
+output "foundation_feature_flags" {
+  description = "Current foundation control flags and reserved inputs for future expansion."
+  value = {
+    allowed_cidr_blocks        = var.allowed_cidr_blocks
+    enable_deletion_protection = var.enable_deletion_protection
+    enable_access_logging      = var.enable_access_logging
+  }
+}

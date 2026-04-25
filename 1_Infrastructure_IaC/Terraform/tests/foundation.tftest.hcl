@@ -21,6 +21,20 @@ mock_provider "aws" {
       partition = "aws"
     }
   }
+
+  override_data {
+    target = data.aws_iam_policy_document.kms
+    values = {
+      json = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"EnableRootPermissions\",\"Effect\":\"Allow\",\"Action\":\"kms:*\",\"Resource\":\"*\",\"Principal\":{\"AWS\":\"arn:aws:iam::123456789012:root\"}}]}"
+    }
+  }
+
+  override_data {
+    target = data.aws_iam_policy_document.cloudtrail_bucket
+    values = {
+      json = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"AllowCloudTrailWrite\",\"Effect\":\"Allow\",\"Action\":\"s3:PutObject\",\"Resource\":\"arn:aws:s3:::adaptive-soc-ai-framework-production-cloudtrail-123456789012/AWSLogs/123456789012/*\",\"Principal\":{\"Service\":\"cloudtrail.amazonaws.com\"}}]}"
+    }
+  }
 }
 
 run "foundation_defaults_plan" {
