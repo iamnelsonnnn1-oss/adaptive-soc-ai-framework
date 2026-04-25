@@ -7,32 +7,11 @@ This platform is designed to deliver adaptive threat detection and automated res
 
 ---
 
-## Project Structure (Full System Topology)
+## Project Architecture (Visual System Topology)
 
-adaptive-soc-ai-framework/
-├── README.md
-├── LICENSE
-├── .github/
-│   └── workflows/
-│       └── ci-cd.yml
-├── core_framework/
-│   ├── 1_Infrastructure_IaC/   # Terraform, Ansible, Docker, Kubernetes
-│   ├── 2_Data_Sources/         # Telemetry and Log origin definitions
-│   ├── 3_Log_Collection/       # Ingestion and pipeline logic
-│   ├── 4_SIEM/                 # ELK Stack / Chronicle
-│   ├── 5_AI_Detection/         # Isolation Forest & Supervised models
-│   ├── 6_Alerts/               # Alert classification and logic
-│   ├── 7_SOAR/                 # Tines automation workflows
-│   └── 8_Response_Actions/     # LimaCharlie EDR mitigation
-├── soc_variants/
-│   ├── cloud_soc/              # CSPM and Cloud-native focus
-│   ├── enterprise_soc/         # Multi-tenant/High-scale configuration
-│   ├── zero_trust_soc/         # Identity-centric architecture
-│   └── smb_soc/                # Lean, cost-effective framework
-└── docs/
-    ├── architecture.md
-    ├── diagrams/
-    └── playbooks/
+![System Topology](docs/diagrams/topology.png)
+
+*The framework is organized into color-coordinated functional phases to ensure a systematic, scalable, and modular build-out.*
 
 ---
 
@@ -59,7 +38,6 @@ adaptive-soc-ai-framework/
 * **Terraform:** Dynamic infrastructure validation.
 * **Ansible:** Playbook testing and configuration management.
 * **Docker:** Container security and validation.
-* **Playwright:** Optional end-to-end testing for SOC dashboards.
 
 ---
 
