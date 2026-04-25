@@ -79,7 +79,11 @@ run "foundation_three_az_plan" {
   }
 
   assert {
-    condition     = aws_nat_gateway.core.subnet_id == aws_subnet.public["eu-central-1a"].id
-    error_message = "The NAT gateway should be anchored in the first public subnet."
+    condition = alltrue([
+      contains(keys(aws_subnet.public), "eu-central-1a"),
+      contains(keys(aws_subnet.public), "eu-central-1b"),
+      contains(keys(aws_subnet.public), "eu-central-1c"),
+    ])
+    error_message = "Three-AZ mode should create public subnets in the expected availability zones."
   }
 }
