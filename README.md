@@ -51,6 +51,18 @@ This platform is designed to deliver adaptive threat detection and automated res
 
 ---
 
+## Security Notes
+
+The current Terraform foundation has passed `terraform fmt`, `terraform validate`, `terraform test`, `tflint`, and GitHub Actions CI. The remaining Snyk IaC findings are currently accepted as low-severity tradeoffs for this stage of the build:
+
+* **Public subnet auto-assigned public IPs:** Intentional for the public subnet tier used by internet-facing resources and NAT placement.
+* **S3 MFA delete not enabled:** Treated as a manual operational hardening step because MFA delete can complicate automated Terraform workflows.
+* **Access-log bucket not self-logging:** Accepted to avoid recursive log-bucket chaining solely to satisfy scanner expectations.
+
+These items should be revisited before production hardening is finalized.
+
+---
+
 ## Author
 
 **Nelson Ortiz**
