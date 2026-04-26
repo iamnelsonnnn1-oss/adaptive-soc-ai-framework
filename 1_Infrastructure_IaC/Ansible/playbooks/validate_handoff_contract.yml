@@ -1,0 +1,28 @@
+---
+- name: Validate Terraform-to-Ansible handoff contract
+  hosts: terraform_managed:&production:&soc_project:&gdpr_scope
+  gather_facts: false
+  tasks:
+    - name: Assert core Terraform governance values are present
+      ansible.builtin.assert:
+        that:
+          - aws_region == "eu-central-1"
+          - terraform_tags.Project == "adaptive-soc-ai-framework"
+          - terraform_tags.Environment == "production"
+          - terraform_tags.ManagedBy == "Terraform"
+          - terraform_tags.ComplianceFramework == "GDPR"
+          - terraform_tags.SecurityBaseline == "Gold"
+          - terraform_tags.Workload == "soc-foundation"
+          - ansible_host is defined
+        fail_msg: "The Terraform-to-Ansible handoff contract is missing or mismatched."
+        success_msg: "Terraform-to-Ansible handoff contract matches the validated foundation defaults."
+
+    - name: Assert inventory grouping mirrors the AWS dynamic inventory design
+      ansible.builtin.assert:
+        that:
+          - "'terraform_managed' in group_names"
+          - "'production' in group_names"
+          - "'soc_project' in group_names"
+          - "'gdpr_scope' in group_names"
+        fail_msg: "Mock inventory grouping drifted from the intended AWS dynamic inventory grouping."
+        success_msg: "Mock inventory grouping matches the intended AWS dynamic inventory grouping."

@@ -1,0 +1,13 @@
+---
+- name: Validate AWS dynamic inventory handoff
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Show resolved host routing details
+      ansible.builtin.debug:
+        msg:
+          inventory_hostname: "{{ inventory_hostname }}"
+          ansible_host: "{{ ansible_host | default('undefined') }}"
+          aws_region: "{{ aws_region | default('undefined') }}"
+          managed_by: "{{ terraform_tags.ManagedBy | default('undefined') }}"
+          environment: "{{ terraform_tags.Environment | default('undefined') }}"

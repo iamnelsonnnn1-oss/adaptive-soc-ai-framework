@@ -1,0 +1,41 @@
+all:
+  vars:
+    aws_region: eu-central-1
+  children:
+    terraform_managed:
+      hosts:
+        soc-demo-01:
+          ansible_connection: local
+          ansible_host: 127.0.0.1
+          private_ip_address: 10.42.2.10
+          public_ip_address: 203.0.113.10
+          vpc_id: vpc-demo1234
+          subnet_id: subnet-demo1234
+          terraform_tags:
+            Name: adaptive-soc-demo-01
+            Project: adaptive-soc-ai-framework
+            Environment: production
+            ManagedBy: Terraform
+            ComplianceFramework: GDPR
+            DataClassification: confidential
+            ContainsPersonalData: "true"
+            SecurityBaseline: Gold
+            Workload: soc-foundation
+    production:
+      hosts:
+        soc-demo-01:
+    soc_project:
+      hosts:
+        soc-demo-01:
+    gdpr_scope:
+      hosts:
+        soc-demo-01:
+    aws_region_eu_central_1:
+      hosts:
+        soc-demo-01:
+    aws_vpc_vpc_demo1234:
+      hosts:
+        soc-demo-01:
+    aws_subnet_subnet_demo1234:
+      hosts:
+        soc-demo-01:

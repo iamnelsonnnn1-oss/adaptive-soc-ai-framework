@@ -1,0 +1,8 @@
+---
+- name: Bootstrap Terraform-managed Linux hosts
+  hosts: terraform_managed:&production
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: baseline

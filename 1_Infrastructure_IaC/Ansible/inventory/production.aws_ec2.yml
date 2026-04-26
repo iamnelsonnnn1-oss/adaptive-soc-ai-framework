@@ -1,0 +1,30 @@
+plugin: amazon.aws.aws_ec2
+regions:
+  - eu-central-1
+filters:
+  instance-state-name: running
+  tag:Project: adaptive-soc-ai-framework
+  tag:Environment: production
+strict: false
+strict_permissions: false
+hostnames:
+  - tag:Name
+  - private-ip-address
+  - dns-name
+compose:
+  ansible_host: public_ip_address | default(private_ip_address)
+  aws_region: placement.region
+keyed_groups:
+  - prefix: aws_region
+    key: placement.region
+  - prefix: aws_vpc
+    key: vpc_id
+  - prefix: aws_subnet
+    key: subnet_id
+  - prefix: tag
+    key: tags
+groups:
+  terraform_managed: tags.ManagedBy == 'Terraform'
+  soc_project: tags.Project == 'adaptive-soc-ai-framework'
+  production: tags.Environment == 'production'
+  gdpr_scope: tags.ComplianceFramework == 'GDPR'

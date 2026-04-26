@@ -63,6 +63,20 @@ These items should be revisited before production hardening is finalized.
 
 ---
 
+## Demo Flow
+
+The repository now supports a demo-ready validation path for both Terraform and the Terraform-to-Ansible handoff.
+
+Run the local framework demo sequence from the repository root:
+
+```bash
+make demo
+```
+
+The full runbook is documented in [docs/demo-runbook.md](docs/demo-runbook.md).
+
+---
+
 ## Author
 
 **Nelson Ortiz**
