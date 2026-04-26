@@ -26,9 +26,10 @@ This platform is designed to deliver adaptive threat detection and automated res
 ## Security Stack
 
 * **SOAR:** Tines
-* **EDR:** LimaCharlie
+* **EDR/XDR:** LimaCharlie, Cybereason
+* **NDR / AI Detection:** Darktrace
 * **IDS/IPS:** Suricata
-* **SIEM:** ELK Stack / Chronicle (optional)
+* **SIEM:** ELK Stack, Google Security Operations (formerly Chronicle)
 
 ---
 
