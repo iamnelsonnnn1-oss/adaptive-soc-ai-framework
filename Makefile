@@ -1,8 +1,9 @@
 TF_DIR := 1_Infrastructure_IaC/Terraform
 ANSIBLE_DIR := 1_Infrastructure_IaC/Ansible
 ANSIBLE_CONFIG := $(CURDIR)/$(ANSIBLE_DIR)/ansible.cfg
+DOCKER_DEMO_DIR := 1_Infrastructure_IaC/Docker/soc-demo-service
 
-.PHONY: terraform-check terraform-test ansible-deps ansible-demo ansible-syntax demo ci-local
+.PHONY: terraform-check terraform-test ansible-deps ansible-demo ansible-syntax docker-build docker-run demo ci-local
 
 terraform-check:
 	terraform -chdir=$(TF_DIR) fmt -check
@@ -22,6 +23,12 @@ ansible-demo:
 ansible-syntax:
 	ANSIBLE_CONFIG=$(ANSIBLE_CONFIG) ansible-playbook -i $(ANSIBLE_DIR)/inventory/demo.mock.yml $(ANSIBLE_DIR)/playbooks/validate_inventory.yml --syntax-check
 	ANSIBLE_CONFIG=$(ANSIBLE_CONFIG) ansible-playbook -i $(ANSIBLE_DIR)/inventory/demo.mock.yml $(ANSIBLE_DIR)/playbooks/bootstrap_linux.yml --syntax-check
+
+docker-build:
+	docker build -t soc-demo-service:latest $(DOCKER_DEMO_DIR)
+
+docker-run:
+	docker run --rm -p 8080:8080 soc-demo-service:latest
 
 demo: terraform-check terraform-test ansible-demo ansible-syntax
 
