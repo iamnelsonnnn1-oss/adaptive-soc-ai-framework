@@ -7,6 +7,16 @@ This platform is designed to deliver adaptive threat detection and automated res
 
 ---
 
+## Live Demo
+
+Explore the hosted dashboard demo here:
+
+[Adaptive SOC AI Framework Demo](https://adaptive-soc-ai-framework-dtbnsixgfu2hxktqwww.jb.streamlit.app/)
+
+The current dashboard is a demo-ready visual layer for the framework and will evolve from mock data to live API-backed telemetry as the platform matures.
+
+---
+
 ## Project Architecture (Visual System Topology)
 
 ![System Topology](docs/diagrams/topology.png)
@@ -67,6 +77,10 @@ These items should be revisited before production hardening is finalized.
 ## Demo Flow
 
 The repository now supports a demo-ready validation path for both Terraform and the Terraform-to-Ansible handoff.
+
+For a hosted visual walkthrough, open the live Streamlit demo:
+
+[Adaptive SOC AI Framework Demo](https://adaptive-soc-ai-framework-dtbnsixgfu2hxktqwww.jb.streamlit.app/)
 
 Run the local framework demo sequence from the repository root:
 
