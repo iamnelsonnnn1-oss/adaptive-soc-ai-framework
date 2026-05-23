@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: adaptive-soc
+  labels:
+    app.kubernetes.io/name: adaptive-soc-ai-framework
+    app.kubernetes.io/part-of: adaptive-soc-platform

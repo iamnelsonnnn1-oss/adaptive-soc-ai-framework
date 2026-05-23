@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: soc-demo-service
+  namespace: adaptive-soc
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: soc-demo-service
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi

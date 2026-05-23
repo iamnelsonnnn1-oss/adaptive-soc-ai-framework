@@ -1,0 +1,7 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: soc-demo-service
+  namespace: adaptive-soc
+spec:
+  replicas: 3

@@ -1,0 +1,8 @@
+runAsNonRoot: true
+allowPrivilegeEscalation: false
+readOnlyRootFilesystem: false
+seccompProfile:
+  type: RuntimeDefault
+capabilities:
+  drop:
+    - ALL

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: soc-demo-service-config
+  namespace: adaptive-soc
+data:
+  FRAMEWORK_NAME: adaptive-soc-ai-framework
+  FRAMEWORK_REGION: eu-central-1
+  FRAMEWORK_LAYERS: terraform,ansible,docker,kubernetes
