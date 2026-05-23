@@ -3,4 +3,4 @@ resources:
 - service.yaml
 - configmap.yaml
 - poddisruptionbudget.yaml
-- secrets/secrets.yaml
+# - secrets/secrets.yaml
