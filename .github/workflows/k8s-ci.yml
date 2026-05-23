@@ -1,0 +1,30 @@
+name: Kubernetes CI
+
+on:
+  push:
+    paths:
+      - '1_Infrastructure_IaC/Kubernetes/**'
+  pull_request:
+    paths:
+      - '1_Infrastructure_IaC/Kubernetes/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Validate Manifests
+        run: |
+          # Validate base and overlays
+          kustomize build 1_Infrastructure_IaC/Kubernetes/overlays/demo
+          kustomize build 1_Infrastructure_IaC/Kubernetes/overlays/staging
+          kustomize build 1_Infrastructure_IaC/Kubernetes/overlays/production
+          
+          # Run custom validation scripts
+          chmod +x 1_Infrastructure_IaC/Kubernetes/ci/*.sh
+          ./1_Infrastructure_IaC/Kubernetes/ci/validate-manifests.sh
