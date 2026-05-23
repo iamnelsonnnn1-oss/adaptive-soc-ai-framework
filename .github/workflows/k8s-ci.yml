@@ -28,9 +28,9 @@ jobs:
       - name: Validate Manifests
         run: |
           # Verify dynamic build for all environments
-          kustomize build .
-          kustomize build .
-          kustomize build .
+          kustomize build 1_Infrastructure_IaC/Kubernetes/apps/soc-demo-service
+          kustomize build 1_Infrastructure_IaC/Kubernetes/apps/soc-demo-service
+          kustomize build 1_Infrastructure_IaC/Kubernetes/apps/soc-demo-service
           
           # Execute architectural verification script
           chmod +x 1_Infrastructure_IaC/Kubernetes/ci/*.sh
