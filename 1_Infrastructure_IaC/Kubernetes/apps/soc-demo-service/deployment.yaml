@@ -13,13 +13,25 @@ spec:
       labels:
         app.kubernetes.io/name: soc-demo-service
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - soc-demo-service
+              topologyKey: kubernetes.io/hostname
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       containers:
       - name: soc-demo-service
-        image: soc-demo-service:latest
+        image: soc-demo-service:v1.0.0
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
