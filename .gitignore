@@ -13,3 +13,4 @@
 # OS/IDE
 .DS_Store
 .vscode/
+1_Infrastructure_IaC/Kubernetes/apps/soc-demo-service/secrets/

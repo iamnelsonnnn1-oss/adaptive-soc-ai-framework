@@ -18,13 +18,18 @@ jobs:
       - name: Setup Kustomize
         uses: imranismail/setup-kustomize@v2
 
+      - name: Lint Kubernetes Manifests
+        uses: stackrox/kube-linter-action@v1
+        with:
+          directory: 1_Infrastructure_IaC/Kubernetes/base
+
       - name: Validate Manifests
         run: |
-          # Validate base and overlays
+          # Verify dynamic build for all environments
           kustomize build 1_Infrastructure_IaC/Kubernetes/overlays/demo
           kustomize build 1_Infrastructure_IaC/Kubernetes/overlays/staging
           kustomize build 1_Infrastructure_IaC/Kubernetes/overlays/production
           
-          # Run custom validation scripts
+          # Execute architectural verification script
           chmod +x 1_Infrastructure_IaC/Kubernetes/ci/*.sh
           ./1_Infrastructure_IaC/Kubernetes/ci/validate-manifests.sh
