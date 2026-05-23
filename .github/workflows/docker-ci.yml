@@ -1,0 +1,54 @@
+name: Docker CI
+
+on:
+  push:
+    paths:
+      - ".github/workflows/docker-ci.yml"
+      - "1_Infrastructure_IaC/Docker/**"
+      - "Makefile"
+  pull_request:
+    paths:
+      - ".github/workflows/docker-ci.yml"
+      - "1_Infrastructure_IaC/Docker/**"
+      - "Makefile"
+
+permissions:
+  contents: read
+
+env:
+  DOCKER_DEMO_DIR: 1_Infrastructure_IaC/Docker/soc-demo-service
+  IMAGE_NAME: soc-demo-service:ci
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Build demo service image
+        run: docker build -t "$IMAGE_NAME" "$DOCKER_DEMO_DIR"
+
+      - name: Start demo service container
+        run: docker run -d --rm --name soc-demo-ci -p 8080:8080 "$IMAGE_NAME"
+
+      - name: Wait for health endpoint
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS http://127.0.0.1:8080/health; then
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
+
+      - name: Validate framework endpoint
+        run: curl -fsS http://127.0.0.1:8080/framework
+
+      - name: Validate telemetry endpoint
+        run: curl -fsS http://127.0.0.1:8080/telemetry
+
+      - name: Stop demo service container
+        if: always()
+        run: docker stop soc-demo-ci
