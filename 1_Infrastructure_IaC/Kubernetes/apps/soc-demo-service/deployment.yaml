@@ -13,9 +13,18 @@ spec:
       labels:
         app.kubernetes.io/name: soc-demo-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: soc-demo-service
         image: soc-demo-service:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
         envFrom:
         - configMapRef:
             name: soc-demo-service-config
@@ -24,3 +33,10 @@ spec:
         ports:
         - containerPort: 8080
           name: http
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
