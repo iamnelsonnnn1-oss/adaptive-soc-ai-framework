@@ -23,7 +23,7 @@ jobs:
       - name: Lint Kubernetes Manifests
         uses: stackrox/kube-linter-action@v1
         with:
-          directory: 1_Infrastructure_IaC/Kubernetes/base
+          directory: 1_Infrastructure_IaC/Kubernetes
 
       - name: Validate Manifests
         run: |
