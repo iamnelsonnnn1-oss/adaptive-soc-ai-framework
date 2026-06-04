@@ -53,6 +53,7 @@ def get_pipeline_status_data() -> pd.DataFrame:
             {"Pipeline": "Terraform CI", "Status": "Pass"},
             {"Pipeline": "Ansible CI", "Status": "Pass"},
             {"Pipeline": "Docker CI", "Status": "Pass"},
+            {"Pipeline": "Kubernetes CI", "Status": "Pass"},
         ]
     )
 
