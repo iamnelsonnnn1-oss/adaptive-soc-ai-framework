@@ -3,8 +3,6 @@ import streamlit as st
 import random
 import base64
 import os
-import boto3
-from botocore.exceptions import ClientError
 from datetime import datetime
 
 
@@ -15,10 +13,9 @@ st.set_page_config(
 )
 
 
-def inject_custom_css(breach_active: bool = False, real_data_active: bool = False) -> None:
+def inject_custom_css(breach_active: bool = False) -> None:
     alert_style = '.stApp { animation: alert-flash 2s infinite !important; } @keyframes alert-flash { 0%, 100% { background-color: #000000; } 50% { background-color: #001a00; } }' if breach_active else ''
     ai_breach_style = '.ai-analyst-box { border-left: 4px solid #00FF00 !important; border: 1px solid #00FF00 !important; box-shadow: 0 0 15px rgba(0, 255, 0, 0.4) !important; }' if breach_active else ''
-    pulse_speed = "0.5s" if real_data_active else "2s"
     st.markdown("""
         <style>
         /* Sovereign Canvas Reset */
@@ -54,7 +51,7 @@ def inject_custom_css(breach_active: bool = False, real_data_active: bool = Fals
             100% { r: 12; opacity: 0; }
         }
         .map-node-pulse {
-            animation: map-pulse """ + pulse_speed + """ infinite;
+            animation: map-pulse 2s infinite;
             fill: #00D1FF;
         }
         @keyframes dash-move {
@@ -128,29 +125,7 @@ def get_system_health_data() -> dict:
     return {"cpu_percent": 42, "memory_percent": 68}
 
 
-def fetch_aws_telemetry(log_group="/aws/vpc/adaptive-soc-ai-framework-production/flow-logs", region="eu-central-1"):
-    try:
-        client = boto3.client('logs', region_name=region)
-        response = client.filter_log_events(logGroupName=log_group, limit=5)
-        events = []
-        for event in response.get('events', []):
-            events.append({
-                "ID": f"CW-{event['eventId'][-4:]}",
-                "Severity": "Medium",
-                "Source": "AWS-CloudWatch",
-                "Vector": "VPC-Ingress",
-                "Status": "Analyzing",
-                "Time": datetime.fromtimestamp(event['timestamp']/1000).strftime("%H:%M:%S")
-            })
-        return events
-    except (ClientError, Exception):
-        return []
-
-
 def get_active_threats_data() -> pd.DataFrame:
-    # Attempt to pull real telemetry from AWS Free Tier
-    real_events = fetch_aws_telemetry()
-    
     threat_pool = [
         {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Exfiltration", "Status": "Intercepted"},
         {"ID": "TR-1082", "Severity": "High", "Source": "Core Defense", "Vector": "Privilege Esc", "Status": "Isolating"},
@@ -164,11 +139,9 @@ def get_active_threats_data() -> pd.DataFrame:
     ]
     
     if 'threat_log' not in st.session_state:
-        # Combine real telemetry with mock data if real data is sparse
-        initial_log = real_events + random.sample(threat_pool, max(0, 4 - len(real_events)))
-        if not real_events:
-            for item in initial_log:
-                item["Time"] = datetime.now().strftime("%H:%M:%S")
+        initial_log = random.sample(threat_pool, 4)
+        for item in initial_log:
+            item["Time"] = datetime.now().strftime("%H:%M:%S")
         st.session_state.threat_log = initial_log
 
     return pd.DataFrame(st.session_state.threat_log)
@@ -234,10 +207,6 @@ def render_pipeline_status() -> None:
 
 
 def main() -> None:
-    # Detect active threat telemetry mode
-    threat_data = get_active_threats_data()
-    real_data_active = any(t.get("Source") == "AWS-CloudWatch" for t in threat_data.to_dict('records'))
-
     # Command Simulation State
     with st.sidebar:
         st.markdown("<p style='color: #777777; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
