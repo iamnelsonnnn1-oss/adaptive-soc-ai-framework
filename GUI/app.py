@@ -3,6 +3,9 @@ import streamlit as st
 import random
 import base64
 import os
+import pydeck as pdk
+import json
+from urllib.request import urlopen
 from datetime import datetime
 
 
@@ -161,15 +164,15 @@ def get_system_health_data() -> dict:
 
 def get_active_threats_data() -> pd.DataFrame:
     threat_pool = [
-        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Exfiltration", "Status": "Intercepted"},
-        {"ID": "TR-1082", "Severity": "High", "Source": "Core Defense", "Vector": "Privilege Esc", "Status": "Isolating"},
-        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Linter", "Vector": "Misconfig", "Status": "Triaged"},
-        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "Beaconing", "Status": "Blocking"},
-        {"ID": "TR-1085", "Severity": "High", "Source": "LimaCharlie", "Vector": "Ransomware-IOA", "Status": "Killing"},
-        {"ID": "TR-1086", "Severity": "Medium", "Source": "Suricata", "Vector": "SQL Injection", "Status": "Logged"},
-        {"ID": "TR-1087", "Severity": "Low", "Source": "Kube-Linter", "Vector": "Root Container", "Status": "Triaged"},
-        {"ID": "TR-1088", "Severity": "High", "Source": "CloudTrail", "Vector": "Credential Theft", "Status": "Suspending"},
-        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "DDoS Ingress", "Status": "Filtering"}
+        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Exfiltration", "Status": "Intercepted", "lat": 51.5074, "lon": -0.1278},
+        {"ID": "TR-1082", "Severity": "High", "Source": "Core Defense", "Vector": "Privilege Esc", "Status": "Isolating", "lat": 48.8566, "lon": 2.3522},
+        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Linter", "Vector": "Misconfig", "Status": "Triaged", "lat": 52.5200, "lon": 13.4050},
+        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "Beaconing", "Status": "Blocking", "lat": 40.7128, "lon": -74.0060},
+        {"ID": "TR-1085", "Severity": "High", "Source": "LimaCharlie", "Vector": "Ransomware-IOA", "Status": "Killing", "lat": 34.0522, "lon": -118.2437},
+        {"ID": "TR-1086", "Severity": "Medium", "Source": "Suricata", "Vector": "SQL Injection", "Status": "Logged", "lat": 35.6762, "lon": 139.6503},
+        {"ID": "TR-1087", "Severity": "Low", "Source": "Kube-Linter", "Vector": "Root Container", "Status": "Triaged", "lat": -33.8688, "lon": 151.2093},
+        {"ID": "TR-1088", "Severity": "High", "Source": "CloudTrail", "Vector": "Credential Theft", "Status": "Suspending", "lat": 25.2048, "lon": 55.2708},
+        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "DDoS Ingress", "Status": "Filtering", "lat": 1.3521, "lon": 103.8198}
     ]
     
     if 'threat_log' not in st.session_state:
@@ -222,9 +225,46 @@ def render_active_threats() -> None:
 
 
 def render_anomaly_map() -> None:
-    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// GLOBAL ANOMALY SPATIAL PROJECTION [ 3D MODE ACTIVE ]</p>", unsafe_allow_html=True)
-    map_html = '<div style="background:#0a0f18;border:1px solid #1A1A1A;padding:25px;border-radius:4px;height:600px;overflow:hidden;box-shadow: inset 0 0 50px rgba(0,209,255,0.05);"><svg viewBox="0 0 1000 420" style="width:100%;height:100%;"><defs><radialGradient id="globe-grad" cx="50%" cy="50%" r="50%" fx="50%" fy="30%"><stop offset="0%" style="stop-color:#1a2a3a;stop-opacity:1" /><stop offset="100%" style="stop-color:#05080c;stop-opacity:1" /></radialGradient><pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a2533" stroke-width="0.5"/></pattern><clipPath id="globe-clip"><circle cx="500" cy="210" r="180" /></clipPath><style>@keyframes alert-cycle { 0%, 100% { opacity: 0; transform: translateY(10px); } 10%, 40% { opacity: 1; transform: translateY(0); } 50% { opacity: 0; transform: translateY(-10px); } } .map-alert { animation: alert-cycle 8s infinite; } .orbit-ring { stroke: #00D1FF; stroke-width: 0.5; stroke-dasharray: 5,5; opacity: 0.2; fill: none; }</style></defs><circle cx="500" cy="210" r="220" class="orbit-ring" /><circle cx="500" cy="210" r="180" fill="url(#globe-grad)" stroke="#00D1FF" stroke-width="0.5" /><g clip-path="url(#globe-clip)"><rect class="globe-texture" width="1400" height="420" fill="url(#grid-pattern)" /></g><line x1="150" y1="150" x2="500" y2="210" class="map-connection" /><line x1="850" y1="120" x2="500" y2="210" class="map-connection" /><line x1="800" y1="350" x2="500" y2="210" class="map-connection" /><circle cx="150" cy="150" r="5" fill="#00D1FF" /><circle cx="150" cy="150" r="10" class="map-node-pulse" style="animation-delay: 0s;" /><text x="140" y="135" fill="#FFFFFF" font-size="10" font-weight="bold">USA-DC-PROD</text><circle cx="850" cy="120" r="5" fill="#00D1FF" /><circle cx="850" cy="120" r="10" class="map-node-pulse" style="animation-delay: 0.5s;" /><text x="840" y="105" fill="#FFFFFF" font-size="10" font-weight="bold">EU-FRA-NODE</text><circle cx="800" cy="350" r="5" fill="#00D1FF" /><circle cx="800" cy="350" r="10" class="map-node-pulse" style="animation-delay: 1.2s;" /><text x="790" y="335" fill="#FFFFFF" font-size="10" font-weight="bold">AP-SGP-CENTRAL</text><rect x="485" y="195" width="30" height="30" fill="none" stroke="#FFFFFF" stroke-width="1" /><text x="470" y="245" fill="#FFFFFF" font-size="12" font-weight="bold">SECUREX HUB</text><g class="map-alert"><rect x="680" y="200" width="160" height="50" fill="rgba(10,15,24,0.9)" stroke="#00D1FF" stroke-width="0.5" /><text x="690" y="220" fill="#00D1FF" font-size="10" font-weight="bold">AI: ANOMALY DETECTED</text><text x="690" y="235" fill="#FFFFFF" font-size="9">TARGET: K8S-NODE-03</text></g></svg></div>'
-    st.markdown(map_html, unsafe_allow_html=True)
+    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// LIVE GEOSPATIAL TELEMETRY [ SATELLITE MODE ]</p>", unsafe_allow_html=True)
+    
+    # 1. Attempt to get current location from IP (Fall back to London HQ if fails)
+    try:
+        url = 'http://ip-api.com/json'
+        response = urlopen(url)
+        data = json.load(response)
+        curr_lat, curr_lon = data['lat'], data['lon']
+    except:
+        curr_lat, curr_lon = 51.5074, -0.1278
+
+    threats = get_active_threats_data()
+    
+    # 2. Define Pydeck layers
+    layer = pdk.Layer(
+        "ScatterplotLayer",
+        threats,
+        get_position=["lon", "lat"],
+        get_color="[0, 255, 0, 160]",
+        get_radius=100000,
+        pickable=True
+    )
+    
+    # 3. Create the deck
+    # Note: Satellite view with labels provides the "Google Maps" look with trees/roads
+    view_state = pdk.ViewState(
+        latitude=curr_lat,
+        longitude=curr_lon,
+        zoom=3,
+        pitch=45,
+    )
+    
+    r = pdk.Deck(
+        layers=[layer],
+        initial_view_state=view_state,
+        map_style="mapbox://styles/mapbox/satellite-streets-v11",
+        tooltip={"text": "Anomaly: {Vector}\nSource: {Source}"}
+    )
+    
+    st.pydeck_chart(r)
 
 
 def render_ai_analyst() -> None:
@@ -247,8 +287,9 @@ def main() -> None:
         breach_sim = st.toggle("SIMULATE SYSTEM BREACH", value=False)
         
         if st.button("INJECT DETECTION EVENT"):
+            # Generate a new threat with a random global coordinate
             new_threat = random.choice([
-                {"ID": f"TR-{random.randint(2000, 9000)}", "Severity": random.choice(["High", "Critical", "Medium"]), "Source": random.choice(["Suricata", "CrowdStrike", "Falcon"]), "Vector": random.choice(["Lateral Movement", "Brute Force", "API Abuse"]), "Status": "Investigating"}
+                {"ID": f"TR-{random.randint(2000, 9000)}", "Severity": random.choice(["High", "Critical", "Medium"]), "Source": random.choice(["Suricata", "CrowdStrike", "Falcon"]), "Vector": random.choice(["Lateral Movement", "Brute Force", "API Abuse"]), "Status": "Investigating", "lat": random.uniform(-60, 60), "lon": random.uniform(-120, 120)}
             ])
             new_threat["Time"] = datetime.now().strftime("%H:%M:%S")
             # Prepend to keep latest on top
