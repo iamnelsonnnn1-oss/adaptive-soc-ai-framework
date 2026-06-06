@@ -92,17 +92,19 @@ def inject_custom_css() -> None:
         }
         
         /* Tactical Metric Overrides */
-        [data-testid="stMetric"] {
+        div[data-testid="stMetric"], .stMetric {
             background-color: #000000 !important;
             border: 1px solid #222222 !important;
             padding: 15px !important;
         }
-        [data-testid="stMetricValue"] > div {
+        div[data-testid="stMetricValue"] > div, .stMetricValue > div {
             color: #FF0055 !important;
             font-family: 'Courier New', monospace !important;
+            font-size: 1.8rem !important;
         }
-        [data-testid="stMetricLabel"] > div {
+        div[data-testid="stMetricLabel"] > div, .stMetricLabel > div {
             color: #FFFFFF !important;
+            letter-spacing: 1px !important;
         }
         </style>
     """, unsafe_allow_html=True)
