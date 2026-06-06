@@ -1,5 +1,7 @@
 import pandas as pd
 import streamlit as st
+import random
+from datetime import datetime
 
 
 st.set_page_config(
@@ -120,12 +122,25 @@ def get_system_health_data() -> dict:
 
 
 def get_active_threats_data() -> pd.DataFrame:
-    return pd.DataFrame([
-        {"Time": "18:04:22", "ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Exfiltration", "Status": "Intercepted"},
-        {"Time": "18:04:25", "ID": "TR-1082", "Severity": "High", "Source": "Core Defense", "Vector": "Privilege Esc", "Status": "Isolating"},
-        {"Time": "18:04:31", "ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Linter", "Vector": "Misconfig", "Status": "Triaged"},
-        {"Time": "18:04:36", "ID": "TR-1088", "Severity": "Low", "Source": "GuardDuty", "Vector": "Port Scan", "Status": "Logged"}
-    ])
+    threat_pool = [
+        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Exfiltration", "Status": "Intercepted"},
+        {"ID": "TR-1082", "Severity": "High", "Source": "Core Defense", "Vector": "Privilege Esc", "Status": "Isolating"},
+        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Linter", "Vector": "Misconfig", "Status": "Triaged"},
+        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "Beaconing", "Status": "Blocking"},
+        {"ID": "TR-1085", "Severity": "High", "Source": "LimaCharlie", "Vector": "Ransomware-IOA", "Status": "Killing"},
+        {"ID": "TR-1086", "Severity": "Medium", "Source": "Suricata", "Vector": "SQL Injection", "Status": "Logged"},
+        {"ID": "TR-1087", "Severity": "Low", "Source": "Kube-Linter", "Vector": "Root Container", "Status": "Triaged"},
+        {"ID": "TR-1088", "Severity": "High", "Source": "CloudTrail", "Vector": "Credential Theft", "Status": "Suspending"},
+        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "DDoS Ingress", "Status": "Filtering"}
+    ]
+    
+    if 'threat_log' not in st.session_state:
+        initial_log = random.sample(threat_pool, 4)
+        for item in initial_log:
+            item["Time"] = datetime.now().strftime("%H:%M:%S")
+        st.session_state.threat_log = initial_log
+
+    return pd.DataFrame(st.session_state.threat_log)
 
 
 def get_pipeline_status_data() -> pd.DataFrame:
@@ -203,6 +218,15 @@ def main() -> None:
     with st.sidebar:
         st.markdown("<p style='color: #777777; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
         breach_sim = st.toggle("SIMULATE SYSTEM BREACH", value=False)
+        
+        if st.button("INJECT DETECTION EVENT"):
+            new_threat = random.choice([
+                {"ID": f"TR-{random.randint(2000, 9000)}", "Severity": random.choice(["High", "Critical", "Medium"]), "Source": random.choice(["Suricata", "CrowdStrike", "Falcon"]), "Vector": random.choice(["Lateral Movement", "Brute Force", "API Abuse"]), "Status": "Investigating"}
+            ])
+            new_threat["Time"] = datetime.now().strftime("%H:%M:%S")
+            # Prepend to keep latest on top
+            st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
+            st.rerun()
 
     inject_custom_css(breach_active=breach_sim)
     render_header()
