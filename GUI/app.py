@@ -19,10 +19,32 @@ def inject_custom_css(breach_active: bool = False) -> None:
     spin_speed = "5s" if breach_active else "20s"
     st.markdown("""
         <style>
-        /* Sovereign Canvas Reset */
+        /* Sovereign Canvas Reset & Corporate Depth */
         .stApp {
-            background-color: #000000 !important;
+            background: 
+                radial-gradient(circle at 50% 50%, #0a1118 0%, #000000 100%) !important;
+            background-attachment: fixed !important;
             color: #FFFFFF !important;
+        }
+        [data-testid="stSidebar"] {
+            background-color: rgba(5, 8, 12, 0.8) !important;
+            backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(0, 255, 0, 0.1) !important;
+        }
+        [data-testid="stSidebar"] label p {
+            color: #FFFFFF !important;
+            font-family: 'Courier New', monospace !important;
+        }
+        .stApp::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 0, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 0, 0.015) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
         }
         
         /* Tactical Font Injectors */
@@ -77,8 +99,9 @@ def inject_custom_css(breach_active: bool = False) -> None:
 
         /* AI Analyst Box */
         .ai-analyst-box {
-            background: #0A0A0A;
-            border: 1px solid #1A1A1A;
+            background: rgba(10, 15, 24, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 0, 0.1);
             border-left: 4px solid #00FF00;
             padding: 15px;
             margin-top: 20px; /* Ensure sufficient spacing from other elements */
@@ -86,9 +109,10 @@ def inject_custom_css(breach_active: bool = False) -> None:
         
         /* High-Density Command Metric Containers */
         .pipeline-card {
-            background: #050505;
+            background: rgba(5, 5, 5, 0.6);
+            backdrop-filter: blur(5px);
             padding: 10px;
-            border: 1px solid #1A1A1A;
+            border: 1px solid rgba(255, 255, 255, 0.05);
             border-left: 3px solid #00FF00;
             margin-bottom: 12px;
         }
@@ -109,8 +133,8 @@ def inject_custom_css(breach_active: bool = False) -> None:
         
         /* Tactical Metric Overrides */
         div[data-testid="stMetric"], div.stMetric {
-            background-color: #000000 !important;
-            border: 1px solid #1A1A1A !important;
+            background-color: rgba(0, 0, 0, 0.4) !important;
+            border: 1px solid rgba(0, 255, 0, 0.05) !important;
             padding: 20px !important;
             border-radius: 2px !important;
         }
@@ -219,7 +243,7 @@ def render_pipeline_status() -> None:
 def main() -> None:
     # Command Simulation State
     with st.sidebar:
-        st.markdown("<p style='color: #777777; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #FFFFFF; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
         breach_sim = st.toggle("SIMULATE SYSTEM BREACH", value=False)
         
         if st.button("INJECT DETECTION EVENT"):
