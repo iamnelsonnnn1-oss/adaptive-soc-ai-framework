@@ -195,13 +195,15 @@ def render_active_threats() -> None:
 
 
 def render_radar() -> None:
-    st.subheader("Network Scan")
-    st.markdown("""<div class="radar-container">
+    st.subheader("Autonomous AI Threat Topology")
+    st.markdown("""<div class="radar-container" style="width: 220px; height: 220px; border: 2px dashed #ff0000; background: radial-gradient(circle, #1a0000 10%, #000000 90%); position: relative;">
     <div class="radar-grid"></div>
-    <div class="radar-sweep"></div>
-    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff000033; font-size: 0.6rem; font-family: monospace;">SCANNING...</div>
+    <div class="radar-sweep" style="animation: rotate 3s linear infinite; background: conic-gradient(from 0deg, transparent 60%, rgba(255, 0, 0, 0.4) 100%);"></div>
+    <div style="position: absolute; top: 35%; left: 60%; width: 8px; height: 8px; background-color: #ff4b4b; border-radius: 50%; box-shadow: 0 0 12px #ff4b4b;"></div>
+    <div style="position: absolute; top: 70%; left: 30%; width: 6px; height: 6px; background-color: #ffffff; border-radius: 50%; box-shadow: 0 0 8px #ffffff;"></div>
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff000088; font-size: 0.7rem; font-family: monospace; font-weight: bold; letter-spacing: 1px;">ANOMALY TRACKING</div>
 </div>""", unsafe_allow_html=True)
-    st.caption("Real-time anomaly detection active.")
+    st.caption("Self-learning AI models mapping device behavior strings across cluster nodes.")
 
 
 def render_anomaly_map() -> None:
