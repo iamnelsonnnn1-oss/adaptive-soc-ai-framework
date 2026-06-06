@@ -111,10 +111,10 @@ def get_pipeline_status_data() -> pd.DataFrame:
 
 def render_header() -> None:
     st.markdown("""
-<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 35px; border-bottom: 1px solid #222222; padding-bottom: 20px;">
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 35px; border-bottom: 1px solid #111111; padding-bottom: 20px;">
     <div>
-        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 900; letter-spacing: 3px; color: #FFFFFF;">COMMAND SURFACE: ADAPTIVE SOC AI</h1>
-        <p style="color: #666666; margin: 4px 0 0 0; font-size: 0.8rem; letter-spacing: 1px;">[ ROLE: SENIOR DEVSECOPS COMMANDER // WORKSPACE: LOCAL_MAIN ]</p>
+        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 900; letter-spacing: 3px; color: #FFFFFF;">SECUREX // ADAPTIVE SOC</h1>
+        <p style="color: #777777; margin: 5px 0 0 0; font-size: 0.8rem; letter-spacing: 1px;">[ DEFEND • DETECT • RESPOND // WORKSPACE HEAD: COMMANDER ]</p>
     </div>
     <div style="background: #000000; border: 1px solid #FF0055; padding: 10px 18px;">
         <span class="status-pulse-commander"></span>
@@ -176,7 +176,8 @@ def render_pipeline_status() -> None:
     st.subheader("Pipeline Automation")
     pipelines = get_pipeline_status_data()
     for _, row in pipelines.iterrows():
-        st.markdown(f"""<div class="pipeline-card"><div class="pipeline-name">{row['Pipeline']}</div><div style="color: #FF0055; font-size: 0.75rem; font-weight: bold; margin-top: 4px;">>>> SECURE OPERATIONAL</div></div>""", unsafe_allow_html=True)
+        card_html = f'<div class="pipeline-card"><div class="pipeline-name">{row["Pipeline"]}</div><div style="color:#FF0055;font-size:0.75rem;font-weight:bold;margin-top:4px;">>>> SECURE OPERATIONAL</div></div>'
+        st.markdown(card_html, unsafe_allow_html=True)
 
 
 def main() -> None:
