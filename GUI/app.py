@@ -25,46 +25,57 @@ def inject_custom_css() -> None:
         
         /* Glow Heartbeat Indicator */
         @keyframes pulse-crimson {
-            0% { transform: scale(0.98); opacity: 0.5; box-shadow: 0 0 4px #FF0055; }
-            50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 14px #FF0055; }
-            100% { transform: scale(0.98); opacity: 0.5; box-shadow: 0 0 4px #FF0055; }
+            0% { transform: scale(0.98); opacity: 0.5; box-shadow: 0 0 4px #FF003C; }
+            50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 14px #FF003C; }
+            100% { transform: scale(0.98); opacity: 0.5; box-shadow: 0 0 4px #FF003C; }
         }
         .status-pulse-commander {
             height: 10px;
             width: 10px;
-            background-color: #FF0055;
+            background-color: #FF003C;
             border-radius: 50%;
             display: inline-block;
             margin-right: 12px;
             animation: pulse-crimson 1.8s infinite ease-in-out;
         }
-        
-        /* Advanced Cyber Scanner Graphic */
-        .radar-box {
-            position: relative;
-            width: 160px;
-            height: 160px;
-            background: radial-gradient(circle, #150005 0%, #000000 85%);
-            border: 1px solid #222222;
-            border-radius: 50%;
-            overflow: hidden;
-            margin: 0 auto;
+
+        /* Global Anomaly Map Animations */
+        @keyframes map-pulse {
+            0% { r: 4; opacity: 1; }
+            100% { r: 12; opacity: 0; }
         }
-        .radar-grid-lines {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(circle, transparent 35%, rgba(51, 51, 51, 0.3) 36%, transparent 37%),
-                radial-gradient(circle, transparent 65%, rgba(51, 51, 51, 0.3) 66%, transparent 67%);
+        .map-node-pulse {
+            animation: map-pulse 2s infinite;
+            fill: #FF003C;
         }
-        .radar-sweep-line {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: conic-gradient(from 0deg, transparent 45%, rgba(255, 0, 85, 0.3) 100%);
-            animation: sweep-rotate 2.5s linear infinite;
+        @keyframes dash-move {
+            to { stroke-dashoffset: -20; }
         }
+        .map-connection {
+            stroke: #FF003C;
+            stroke-width: 1;
+            stroke-dasharray: 4, 2;
+            animation: dash-move 1s linear infinite;
+            opacity: 0.3;
+        }
+
+        /* AI Analyst Box */
+        .ai-analyst-box {
+            background: #0A0A0A;
+            border: 1px solid #1A1A1A;
+            border-left: 4px solid #FF003C;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .ai-header {
+            color: #FF003C;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
         @keyframes sweep-rotate {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -73,9 +84,9 @@ def inject_custom_css() -> None:
         /* High-Density Command Metric Containers */
         .pipeline-card {
             background: #050505;
-            padding: 14px;
-            border: 1px solid #222222;
-            border-left: 4px solid #FF0055;
+            padding: 10px;
+            border: 1px solid #1A1A1A;
+            border-left: 3px solid #FF003C;
             margin-bottom: 12px;
         }
         .pipeline-name {
@@ -83,6 +94,14 @@ def inject_custom_css() -> None:
             font-size: 0.85rem;
             color: #FFFFFF;
             letter-spacing: 1px;
+        }
+        .metric-value {
+            color: #FF003C;
+            font-weight: bold;
+        }
+        .secondary-text {
+            color: #777777;
+            font-size: 0.75rem;
         }
         </style>
     """, unsafe_allow_html=True)
