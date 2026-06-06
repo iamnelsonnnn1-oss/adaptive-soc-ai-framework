@@ -113,8 +113,8 @@ def render_header() -> None:
     st.markdown("""
 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 35px; border-bottom: 1px solid #111111; padding-bottom: 20px;">
     <div>
-        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 900; letter-spacing: 3px; color: #FFFFFF;">SECUREX // ADAPTIVE SOC</h1>
-        <p style="color: #777777; margin: 5px 0 0 0; font-size: 0.8rem; letter-spacing: 1px;">[ DEFEND • DETECT • RESPOND // WORKSPACE HEAD: COMMANDER ]</p>
+        <h1 style="margin: 0; font-family: 'Courier New', monospace; font-weight: 900; letter-spacing: 3px; color: #FFFFFF;">SECUREX // ADAPTIVE SOC</h1>
+        <p style="color: #777777; font-family: 'Courier New', monospace; margin: 5px 0 0 0; font-size: 0.8rem; letter-spacing: 1px;">[ DEFEND • DETECT • RESPOND // WORKSPACE HEAD: COMMANDER ]</p>
     </div>
     <div style="background: #000000; border: 1px solid #FF0055; padding: 10px 18px;">
         <span class="status-pulse-commander"></span>
@@ -172,8 +172,7 @@ def render_radar() -> None:
 
 
 def render_pipeline_status() -> None:
-    st.markdown("<p style='color: #444444; margin: 0 0 4px 0; font-size: 0.75rem;'>// CI ENGINE METRICS</p>", unsafe_allow_html=True)
-    st.subheader("Pipeline Automation")
+    st.subheader("Automation")
     pipelines = get_pipeline_status_data()
     for _, row in pipelines.iterrows():
         card_html = f'<div class="pipeline-card"><div class="pipeline-name">{row["Pipeline"]}</div><div style="color:#FF0055;font-size:0.75rem;font-weight:bold;margin-top:4px;">>>> SECURE OPERATIONAL</div></div>'
