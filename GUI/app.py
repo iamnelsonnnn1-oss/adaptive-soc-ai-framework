@@ -13,8 +13,9 @@ st.set_page_config(
 )
 
 
-def inject_custom_css(breach_active: bool = False) -> None:
+def inject_custom_css(breach_active: bool = False, logo_active: bool = False) -> None:
     alert_style = '.stApp { animation: alert-flash 2s infinite !important; } @keyframes alert-flash { 0%, 100% { background-color: #000000; } 50% { background-color: #330012; } }' if breach_active else ''
+    ai_breach_style = '.ai-analyst-box { border-left: 4px solid #FF0055 !important; border: 1px solid #FF0055 !important; box-shadow: 0 0 15px rgba(255, 0, 85, 0.4) !important; }' if breach_active else ''
     st.markdown("""
         <style>
         /* Sovereign Canvas Reset */
@@ -70,7 +71,7 @@ def inject_custom_css(breach_active: bool = False) -> None:
             border: 1px solid #1A1A1A;
             border-left: 4px solid #FF0055;
             padding: 15px;
-            margin-top: 20px;
+            margin-top: 20px; /* Ensure sufficient spacing from other elements */
         }
         
         /* High-Density Command Metric Containers */
@@ -115,6 +116,7 @@ def inject_custom_css(breach_active: bool = False) -> None:
         }
         /* Breach Simulation Overlay */
         """ + alert_style + """
+        """ + ai_breach_style + """
         </style>
     """, unsafe_allow_html=True)
 
@@ -162,7 +164,7 @@ def render_header() -> None:
     if os.path.exists(logo_path):
         with open(logo_path, "rb") as f:
             logo_b64 = base64.b64encode(f.read()).decode()
-            logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="height:60px;margin-right:20px;vertical-align:middle;">'
+            logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="height:100px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 10px #FF0055);">'
     
     header_html = f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;"><div style="display:flex;align-items:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:1.6rem;font-weight:900;letter-spacing:4px;color:#FFFFFF;">SECUREX COMMAND</h1><p style="color:#777777;margin:5px 0 0 0;font-size:0.75rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div style="display:flex;gap:40px;align-items:center;"><div style="text-align:right;"><div style="color:#777777;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#FF0055;font-weight:bold;font-size:1.2rem;">17</div></div><div style="text-align:right;"><div style="color:#777777;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">2,491</div></div><div style="background:#000000;border:1px solid #FF0055;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#FF0055;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
     st.markdown(header_html, unsafe_allow_html=True)
