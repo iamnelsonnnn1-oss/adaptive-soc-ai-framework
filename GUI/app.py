@@ -188,8 +188,8 @@ def render_active_threats() -> None:
 
 
 def render_anomaly_map() -> None:
-    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// GLOBAL ANOMALY MAP</p>", unsafe_allow_html=True)
-    map_html = '<div style="background:#050505;border:1px solid #1A1A1A;padding:25px;border-radius:4px;height:550px;overflow:hidden;"><svg viewBox="0 0 1000 420" style="width:100%;height:100%;"><defs><pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#111" stroke-width="0.5"/></pattern><clipPath id="globe-clip"><circle cx="500" cy="210" r="180" /></clipPath><style>@keyframes globe-spin { 0% { transform: translateX(0); } 100% { transform: translateX(-400px); } } .globe-texture { animation: globe-spin 15s linear infinite; opacity: 0.2; } @keyframes alert-cycle { 0%, 100% { opacity: 0; transform: translateY(10px); } 10%, 40% { opacity: 1; transform: translateY(0); } 50% { opacity: 0; transform: translateY(-10px); } } .map-alert { animation: alert-cycle 8s infinite; }</style></defs><circle cx="500" cy="210" r="181" fill="none" stroke="#222" stroke-width="1" /><g clip-path="url(#globe-clip)"><rect class="globe-texture" width="1400" height="420" fill="url(#grid-pattern)" /></g><line x1="150" y1="150" x2="500" y2="210" class="map-connection" /><line x1="850" y1="120" x2="500" y2="210" class="map-connection" /><line x1="800" y1="350" x2="500" y2="210" class="map-connection" /><circle cx="150" cy="150" r="4" fill="#00D1FF" /><circle cx="150" cy="150" r="4" class="map-node-pulse" style="animation-delay: 0s;" /><text x="140" y="135" fill="#FFFFFF" font-size="10">NODE-US-PROD</text><circle cx="850" cy="120" r="4" fill="#00D1FF" /><circle cx="850" cy="120" r="4" class="map-node-pulse" style="animation-delay: 0.5s;" /><text x="840" y="105" fill="#FFFFFF" font-size="10">NODE-EU-CENTRAL</text><circle cx="800" cy="350" r="4" fill="#00D1FF" /><circle cx="800" cy="350" r="4" class="map-node-pulse" style="animation-delay: 1.2s;" /><text x="790" y="335" fill="#FFFFFF" font-size="10">NODE-AP-SOUTH</text><rect x="485" y="195" width="30" height="30" fill="none" stroke="#FFFFFF" stroke-width="1" /><text x="470" y="245" fill="#FFFFFF" font-size="12" font-weight="bold">SECUREX HUB</text><g class="map-alert"><rect x="650" y="180" width="140" height="45" fill="#0A0A0A" stroke="#00D1FF" stroke-width="0.5" /><text x="660" y="200" fill="#00D1FF" font-size="9" font-weight="bold">THREAT: ISOLATION</text><text x="660" y="215" fill="#FFFFFF" font-size="8">SRC: 10.42.1.204</text></g></svg></div>'
+    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// GLOBAL ANOMALY SPATIAL PROJECTION [ 3D MODE ACTIVE ]</p>", unsafe_allow_html=True)
+    map_html = '<div style="background:#0a0f18;border:1px solid #1A1A1A;padding:25px;border-radius:4px;height:600px;overflow:hidden;box-shadow: inset 0 0 50px rgba(0,209,255,0.05);"><svg viewBox="0 0 1000 420" style="width:100%;height:100%;"><defs><radialGradient id="globe-grad" cx="50%" cy="50%" r="50%" fx="50%" fy="30%"><stop offset="0%" style="stop-color:#1a2a3a;stop-opacity:1" /><stop offset="100%" style="stop-color:#05080c;stop-opacity:1" /></radialGradient><pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a2533" stroke-width="0.5"/></pattern><clipPath id="globe-clip"><circle cx="500" cy="210" r="180" /></clipPath><style>@keyframes globe-spin { 0% { transform: translateX(0); } 100% { transform: translateX(-400px); } } .globe-texture { animation: globe-spin 20s linear infinite; opacity: 0.4; } @keyframes alert-cycle { 0%, 100% { opacity: 0; transform: translateY(10px); } 10%, 40% { opacity: 1; transform: translateY(0); } 50% { opacity: 0; transform: translateY(-10px); } } .map-alert { animation: alert-cycle 8s infinite; } .orbit-ring { stroke: #00D1FF; stroke-width: 0.5; stroke-dasharray: 5,5; opacity: 0.2; fill: none; }</style></defs><circle cx="500" cy="210" r="220" class="orbit-ring" /><circle cx="500" cy="210" r="180" fill="url(#globe-grad)" stroke="#00D1FF" stroke-width="0.5" /><g clip-path="url(#globe-clip)"><rect class="globe-texture" width="1400" height="420" fill="url(#grid-pattern)" /></g><line x1="150" y1="150" x2="500" y2="210" class="map-connection" /><line x1="850" y1="120" x2="500" y2="210" class="map-connection" /><line x1="800" y1="350" x2="500" y2="210" class="map-connection" /><circle cx="150" cy="150" r="5" fill="#00D1FF" /><circle cx="150" cy="150" r="10" class="map-node-pulse" style="animation-delay: 0s;" /><text x="140" y="135" fill="#FFFFFF" font-size="10" font-weight="bold">USA-DC-PROD</text><circle cx="850" cy="120" r="5" fill="#00D1FF" /><circle cx="850" cy="120" r="10" class="map-node-pulse" style="animation-delay: 0.5s;" /><text x="840" y="105" fill="#FFFFFF" font-size="10" font-weight="bold">EU-FRA-NODE</text><circle cx="800" cy="350" r="5" fill="#00D1FF" /><circle cx="800" cy="350" r="10" class="map-node-pulse" style="animation-delay: 1.2s;" /><text x="790" y="335" fill="#FFFFFF" font-size="10" font-weight="bold">AP-SGP-CENTRAL</text><rect x="485" y="195" width="30" height="30" fill="none" stroke="#FFFFFF" stroke-width="1" /><text x="470" y="245" fill="#FFFFFF" font-size="12" font-weight="bold">SECUREX HUB</text><g class="map-alert"><rect x="680" y="200" width="160" height="50" fill="rgba(10,15,24,0.9)" stroke="#00D1FF" stroke-width="0.5" /><text x="690" y="220" fill="#00D1FF" font-size="10" font-weight="bold">AI: ANOMALY DETECTED</text><text x="690" y="235" fill="#FFFFFF" font-size="9">TARGET: K8S-NODE-03</text></g></svg></div>'
     st.markdown(map_html, unsafe_allow_html=True)
 
 
@@ -228,7 +228,8 @@ def main() -> None:
     inject_custom_css(breach_active=active_breach_mode)
     render_header()
     
-    col_left, col_center, col_right = st.columns([0.8, 5, 0.8])
+    # Main Command Deck
+    col_left, col_center, col_right = st.columns([1.2, 4, 1.2])
     
     with col_left:
         render_active_threats()
@@ -237,10 +238,11 @@ def main() -> None:
         render_anomaly_map()
         
     with col_right:
-        render_system_health()
-        st.markdown("<br>", unsafe_allow_html=True)
         render_pipeline_status()
 
+    # Infrastructure Control Plane (Metrics moved to bottom for space)
+    st.divider()
+    render_system_health()
     render_ai_analyst()
 
 
