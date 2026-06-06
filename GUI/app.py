@@ -1,6 +1,8 @@
 import pandas as pd
 import streamlit as st
 import random
+import base64
+import os
 from datetime import datetime
 
 
@@ -153,28 +155,17 @@ def get_pipeline_status_data() -> pd.DataFrame:
 
 
 def render_header() -> None:
-    st.markdown("""
-<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 1px solid #1A1A1A; padding-bottom: 20px;">
-    <div>
-        <h1 style="margin: 0; font-family: 'Courier New', monospace; font-size: 1.6rem; font-weight: 900; letter-spacing: 4px; color: #FFFFFF;">SECUREX COMMAND</h1>
-        <p style="color: #777777; margin: 5px 0 0 0; font-size: 0.75rem; letter-spacing: 1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p>
-    </div>
-    <div style="display: flex; gap: 40px; align-items: center;">
-        <div style="text-align: right;">
-            <div style="color: #777777; font-size: 0.65rem; letter-spacing: 1px;">THREATS TODAY</div>
-            <div style="color: #FF0055; font-weight: bold; font-size: 1.2rem;">17</div>
-        </div>
-        <div style="text-align: right;">
-            <div class="metric-label">ASSETS MONITORED</div>
-            <div style="color: #FFFFFF; font-weight: bold; font-size: 1.2rem;">2,491</div>
-        </div>
-        <div style="background: #000000; border: 1px solid #FF0055; padding: 8px 15px;">
-            <span class="status-pulse-commander"></span>
-            <span style="color: #FF0055; font-weight: bold; font-size: 0.8rem; letter-spacing: 2px; font-family: 'Courier New', monospace;">COMMAND CENTER ACTIVE</span>
-        </div>
-    </div>
-</div>
-    """, unsafe_allow_html=True)
+    logo_path = os.path.join(os.path.dirname(__file__), "securex.png")
+    if not os.path.exists(logo_path):
+        logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
+    logo_html = ""
+    if os.path.exists(logo_path):
+        with open(logo_path, "rb") as f:
+            logo_b64 = base64.b64encode(f.read()).decode()
+            logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="height:60px;margin-right:20px;vertical-align:middle;">'
+    
+    header_html = f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;"><div style="display:flex;align-items:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:1.6rem;font-weight:900;letter-spacing:4px;color:#FFFFFF;">SECUREX COMMAND</h1><p style="color:#777777;margin:5px 0 0 0;font-size:0.75rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div style="display:flex;gap:40px;align-items:center;"><div style="text-align:right;"><div style="color:#777777;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#FF0055;font-weight:bold;font-size:1.2rem;">17</div></div><div style="text-align:right;"><div style="color:#777777;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">2,491</div></div><div style="background:#000000;border:1px solid #FF0055;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#FF0055;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
+    st.markdown(header_html, unsafe_allow_html=True)
 
 
 def render_system_health() -> None:
