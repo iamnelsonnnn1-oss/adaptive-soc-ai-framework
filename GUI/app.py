@@ -90,6 +90,17 @@ def inject_custom_css() -> None:
             color: #777777;
             font-size: 0.75rem;
         }
+        
+        /* Tactical Metric Overrides */
+        [data-testid="stMetric"] {
+            background-color: #000000 !important;
+        }
+        [data-testid="stMetricValue"] > div {
+            color: #FF003C !important;
+        }
+        [data-testid="stMetricLabel"] > div {
+            color: #FFFFFF !important;
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -120,7 +131,7 @@ def render_header() -> None:
     st.markdown("""
 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 1px solid #1A1A1A; padding-bottom: 20px;">
     <div>
-        <h1 style="margin: 0; font-size: 1.4rem; font-weight: 900; letter-spacing: 4px; color: #FFFFFF;">ADAPTIVE SOC AI COMMAND CENTER</h1>
+        <h1 style="margin: 0; font-size: 1.4rem; font-weight: 900; letter-spacing: 4px; color: #FFFFFF;">SECUREX COMMAND</h1>
         <p style="color: #777777; margin: 5px 0 0 0; font-size: 0.75rem; letter-spacing: 1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p>
     </div>
     <div style="display: flex; gap: 40px; align-items: center;">
@@ -134,7 +145,7 @@ def render_header() -> None:
         </div>
         <div style="background: #000000; border: 1px solid #FF003C; padding: 8px 15px;">
             <span class="status-pulse-commander"></span>
-            <span style="color: #FF003C; font-weight: bold; font-size: 0.75rem; letter-spacing: 2px;">DEFCON ACTIVE</span>
+            <span style="color: #FF003C; font-weight: bold; font-size: 0.75rem; letter-spacing: 2px;">COMMAND CENTER ACTIVE</span>
         </div>
     </div>
 </div>
