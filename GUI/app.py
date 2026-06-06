@@ -9,7 +9,8 @@ st.set_page_config(
 )
 
 
-def inject_custom_css() -> None:
+def inject_custom_css(breach_active: bool = False) -> None:
+    alert_style = '.stApp { animation: alert-flash 2s infinite !important; } @keyframes alert-flash { 0%, 100% { background-color: #000000; } 50% { background-color: #330012; } }' if breach_active else ''
     st.markdown("""
         <style>
         /* Sovereign Canvas Reset */
@@ -92,20 +93,24 @@ def inject_custom_css() -> None:
         }
         
         /* Tactical Metric Overrides */
-        div[data-testid="stMetric"], .stMetric {
+        div[data-testid="stMetric"], div.stMetric {
             background-color: #000000 !important;
-            border: 1px solid #222222 !important;
-            padding: 15px !important;
+            border: 1px solid #1A1A1A !important;
+            padding: 20px !important;
+            border-radius: 2px !important;
         }
-        div[data-testid="stMetricValue"] > div, .stMetricValue > div {
+        [data-testid="stMetricValue"] > div, .stMetricValue, .stMetricValue div {
             color: #FF0055 !important;
             font-family: 'Courier New', monospace !important;
-            font-size: 1.8rem !important;
+            font-size: 2.2rem !important;
         }
-        div[data-testid="stMetricLabel"] > div, .stMetricLabel > div {
+        [data-testid="stMetricLabel"] > div, .stMetricLabel, .stMetricLabel div {
             color: #FFFFFF !important;
             letter-spacing: 1px !important;
+            text-transform: uppercase !important;
         }
+        /* Breach Simulation Overlay */
+        """ + alert_style + """
         </style>
     """, unsafe_allow_html=True)
 
@@ -176,7 +181,7 @@ def render_active_threats() -> None:
 
 def render_anomaly_map() -> None:
     st.markdown("<p style='color: #777777; margin: 0 0 10px 0; font-size: 0.7rem;'>// GLOBAL ANOMALY MAP</p>", unsafe_allow_html=True)
-    map_html = '<div style="background:#050505;border:1px solid #1A1A1A;padding:25px;border-radius:4px;height:480px;overflow:hidden;"><svg viewBox="0 0 1000 420" style="width:100%;height:100%;"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#111" stroke-width="0.5"/></pattern><style>@keyframes alert-cycle { 0%, 100% { opacity: 0; transform: translateY(10px); } 10%, 40% { opacity: 1; transform: translateY(0); } 50% { opacity: 0; transform: translateY(-10px); } } .map-alert { animation: alert-cycle 8s infinite; }</style></defs><rect width="1000" height="420" fill="url(#grid)" /><line x1="150" y1="150" x2="500" y2="210" class="map-connection" /><line x1="850" y1="120" x2="500" y2="210" class="map-connection" /><line x1="800" y1="350" x2="500" y2="210" class="map-connection" /><line x1="200" y1="380" x2="500" y2="210" class="map-connection" /><circle cx="150" cy="150" r="4" fill="#FF0055" /><circle cx="150" cy="150" r="4" class="map-node-pulse" style="animation-delay: 0s;" /><text x="140" y="135" fill="#777777" font-size="10">NODE-US-PROD</text><circle cx="850" cy="120" r="4" fill="#FF0055" /><circle cx="850" cy="120" r="4" class="map-node-pulse" style="animation-delay: 0.5s;" /><text x="840" y="105" fill="#777777" font-size="10">NODE-EU-CENTRAL</text><circle cx="800" cy="350" r="4" fill="#FF0055" /><circle cx="800" cy="350" r="4" class="map-node-pulse" style="animation-delay: 1.2s;" /><text x="790" y="335" fill="#777777" font-size="10">NODE-AP-SOUTH</text><circle cx="200" cy="380" r="4" fill="#FF0055" /><circle cx="200" cy="380" r="4" class="map-node-pulse" style="animation-delay: 0.8s;" /><text x="190" y="365" fill="#777777" font-size="10">NODE-LA-SOUTH</text><rect x="485" y="195" width="30" height="30" fill="none" stroke="#FFFFFF" stroke-width="1" /><text x="470" y="245" fill="#FFFFFF" font-size="12" font-weight="bold">SECUREX HUB</text><g class="map-alert"><rect x="650" y="180" width="140" height="45" fill="#0A0A0A" stroke="#FF0055" stroke-width="0.5" /><text x="660" y="200" fill="#FF0055" font-size="9" font-weight="bold">THREAT: ISOLATION</text><text x="660" y="215" fill="#777777" font-size="8">SRC: 10.42.1.204</text></g></svg></div>'
+    map_html = '<div style="background:#050505;border:1px solid #1A1A1A;padding:25px;border-radius:4px;height:550px;overflow:hidden;"><svg viewBox="0 0 1000 420" style="width:100%;height:100%;"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#111" stroke-width="0.5"/></pattern><style>@keyframes alert-cycle { 0%, 100% { opacity: 0; transform: translateY(10px); } 10%, 40% { opacity: 1; transform: translateY(0); } 50% { opacity: 0; transform: translateY(-10px); } } .map-alert { animation: alert-cycle 8s infinite; }</style></defs><rect width="1000" height="420" fill="url(#grid)" /><line x1="150" y1="150" x2="500" y2="210" class="map-connection" /><line x1="850" y1="120" x2="500" y2="210" class="map-connection" /><line x1="800" y1="350" x2="500" y2="210" class="map-connection" /><line x1="200" y1="380" x2="500" y2="210" class="map-connection" /><circle cx="150" cy="150" r="4" fill="#FF0055" /><circle cx="150" cy="150" r="4" class="map-node-pulse" style="animation-delay: 0s;" /><text x="140" y="135" fill="#777777" font-size="10">NODE-US-PROD</text><circle cx="850" cy="120" r="4" fill="#FF0055" /><circle cx="850" cy="120" r="4" class="map-node-pulse" style="animation-delay: 0.5s;" /><text x="840" y="105" fill="#777777" font-size="10">NODE-EU-CENTRAL</text><circle cx="800" cy="350" r="4" fill="#FF0055" /><circle cx="800" cy="350" r="4" class="map-node-pulse" style="animation-delay: 1.2s;" /><text x="790" y="335" fill="#777777" font-size="10">NODE-AP-SOUTH</text><circle cx="200" cy="380" r="4" fill="#FF0055" /><circle cx="200" cy="380" r="4" class="map-node-pulse" style="animation-delay: 0.8s;" /><text x="190" y="365" fill="#777777" font-size="10">NODE-LA-SOUTH</text><rect x="485" y="195" width="30" height="30" fill="none" stroke="#FFFFFF" stroke-width="1" /><text x="470" y="245" fill="#FFFFFF" font-size="12" font-weight="bold">SECUREX HUB</text><g class="map-alert"><rect x="650" y="180" width="140" height="45" fill="#0A0A0A" stroke="#FF0055" stroke-width="0.5" /><text x="660" y="200" fill="#FF0055" font-size="9" font-weight="bold">THREAT: ISOLATION</text><text x="660" y="215" fill="#777777" font-size="8">SRC: 10.42.1.204</text></g></svg></div>'
     st.markdown(map_html, unsafe_allow_html=True)
 
 
@@ -194,7 +199,12 @@ def render_pipeline_status() -> None:
 
 
 def main() -> None:
-    inject_custom_css()
+    # Command Simulation State
+    with st.sidebar:
+        st.markdown("<p style='color: #777777; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
+        breach_sim = st.toggle("SIMULATE SYSTEM BREACH", value=False)
+
+    inject_custom_css(breach_active=breach_sim)
     render_header()
     
     col_left, col_center, col_right = st.columns([0.8, 5, 0.8])
