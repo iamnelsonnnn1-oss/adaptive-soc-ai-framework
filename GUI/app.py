@@ -18,7 +18,7 @@ if not os.path.exists(logo_path):
     logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
 
 st.set_page_config(
-    page_title="Adaptive SOC AI Framework",
+    page_title="SECUREX COMMAND SIEM/SOAR/SOC Simulator",
     page_icon=logo_path if os.path.exists(logo_path) else "🛡️",
     layout="wide",
 )
@@ -280,7 +280,7 @@ def render_header(threat_count: int = 0, assets_count: int = 0) -> None:
     logo_b64 = get_base64_logo(logo_path)
     logo_html = f'<img class="logo-img" src="data:image/png;base64,{logo_b64}" style="height:100px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">' if logo_b64 else ""
     
-    header_html = f'<div class="header-container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;width:100%;"><div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:2.2rem;font-weight:900;letter-spacing:4px;color:#00FF00;">SECUREX COMMAND</h1><p style="color:#FFFFFF;margin:5px 0 0 0;font-size:0.85rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div class="header-metrics" style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;justify-content:center;"><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#00FF00;font-weight:bold;font-size:1.2rem;">{threat_count}</div></div><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">{assets_count:,}</div></div><div style="background:#000000;border:1px solid #00FF00;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#00FF00;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
+    header_html = f'<div class="header-container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;width:100%;"><div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:2.2rem;font-weight:900;letter-spacing:4px;color:#00FF00;">SECUREX COMMAND SIEM/SOAR/SOC Simulator</h1><p style="color:#FFFFFF;margin:5px 0 0 0;font-size:0.85rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div class="header-metrics" style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;justify-content:center;"><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#00FF00;font-weight:bold;font-size:1.2rem;">{threat_count}</div></div><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">{assets_count:,}</div></div><div style="background:#000000;border:1px solid #00FF00;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#00FF00;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
     st.markdown(header_html, unsafe_allow_html=True)
 
 
@@ -394,34 +394,57 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
 @st.dialog("TACTICAL REMEDIATION INTERFACE")
 def remediation_dialog(latest):
     """Drill-down window for incident analysis and playbook execution."""
+    if 'remediation_step' not in st.session_state:
+        st.session_state.remediation_step = 1
+
+    steps = [
+        "1. CONTAINMENT: Isolate affected systems",
+        "2. PRESERVATION: Secure evidence for forensics",
+        "3. COMMUNICATION: Notify stakeholders & leadership",
+        "4. ANALYSIS: Conduct Root Cause Analysis (RCA)",
+        "5. ERADICATION: Apply patches and technical fixes",
+        "6. RECOVERY: Restore systems & verify integrity",
+        "7. POST-INCIDENT: Monitor for recurrence"
+    ]
+
     st.markdown(f"""
         <div style="background: rgba(0, 20, 0, 0.9); padding: 20px; border: 1px solid #00FF00; font-family: monospace; color: #00FF00;">
             <b style="font-size: 1.1rem;">> INCIDENT: {latest.get('ID')}</b><br/>
-            > SEVERITY: {latest.get('Severity', 'UNKNOWN').upper()}<br/>
-            > MITRE ID: {latest.get('MITRE')}<br/>
-            > CVE: {latest.get('CVE')}<br/><br/>
-            > AI ADVISORY: {latest.get('Insight', 'Analyzing vector payload...')}
+            > IR PHASE: Step {st.session_state.remediation_step} of 7<br/>
+            <hr style="border: 0; border-top: 1px solid rgba(0,255,0,0.2); margin: 10px 0;">
+            > {steps[st.session_state.remediation_step-1]}
         </div>
     """, unsafe_allow_html=True)
     
-    st.write("### Choose Response Playbook:")
-    for action in latest.get('Playbook', []):
-        if st.button(f"INITIATE: {action}", use_container_width=True):
-            if action == latest.get('Correct'):
-                # Remediation Sequence: Award points and transition to case archive
-                st.session_state.active_case = latest.copy()
-                st.rerun()
-            else:
-                st.session_state.last_error = latest.get('DistractorExplanations', {}).get(action, "Incorrect protocol.")
-                st.error(f"MISSION FAILED: {st.session_state.last_error}")
+    st.write("### Tactical Response Actions:")
+    
+    if st.session_state.remediation_step < 7:
+        if st.button(f"EXECUTE {steps[st.session_state.remediation_step-1].split(':')[0]}", use_container_width=True):
+            st.session_state.remediation_step += 1
+            st.rerun()
+    else:
+        st.write("Final Playbook Action Required:")
+        for action in latest.get('Playbook', []):
+            if st.button(f"INITIATE FINAL FIX: {action}", use_container_width=True):
+                if action == latest.get('Correct'):
+                    st.session_state.active_case = latest.copy()
+                    st.session_state.remediation_step = 1 # Reset for next
+                    st.rerun()
+                else:
+                    st.error(f"MISSION FAILED: {latest.get('DistractorExplanations', {}).get(action, 'Incorrect protocol.')}")
+
+    if st.button("Cancel Operation", use_container_width=True):
+        st.session_state.remediation_step = 1
+        st.rerun()
 
 
 def render_case_profile(case_data):
     """Detailed Case View: Triggered when a playbook is executed correctly."""
+    st.markdown(f"## CASE ARCHIVE: {case_data.get('ID')}")
+    
     st.markdown(f"""
         <div style="padding: 20px; border: 2px solid #00FF00; background: rgba(0, 20, 0, 0.95); border-radius: 8px;">
-            <h1 style="color: #00FF00; font-family: monospace; letter-spacing: 3px;">CASE FILE: {case_data.get('ID')}</h1>
-            <p style="color: #FFFFFF; font-size: 1.1rem; border-bottom: 1px solid #1A1A1A; padding-bottom: 10px;"><b>Status:</b> REMEDIATED // ARCHIVING PRE-SAVED PROFILE</p>
+            <h2 style="color: #00FF00; font-family: monospace;">STATUS: REMEDIATED // PENDING 8. FINAL REPORT</h2>
             <div style="display: flex; gap: 40px; margin-top: 30px; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 300px;">
                     <h3 style="color: #00FF00;">INCIDENT DESCRIPTION</h3>
@@ -440,12 +463,30 @@ def render_case_profile(case_data):
         </div>
     """, unsafe_allow_html=True)
     
+    st.divider()
+    st.subheader("Step 8: Write Detailed Incident Report")
+    user_report = st.text_area("Summarize the event, technical steps taken, and lessons learned:", height=200, placeholder="Example: Log4Shell RCE contained by patching Log4j to 2.17. Stakeholders notified via Slack...")
+    
+    if st.button("SUBMIT REPORT FOR AI EVALUATION", type="primary"):
+        if len(user_report) < 20:
+            st.warning("Report too brief. Please provide more tactical detail for Mastery XP.")
+        else:
+            with st.spinner("AI Charlie is reviewing your documentation..."):
+                context = f"Incident: {case_data.get('Vector')}. Student Report: {user_report}"
+                feedback = ask_ai_charlie("Review this incident report. Did they cover containment and remediation? Give personalized feedback.", context)
+                st.session_state.ai_report_feedback = feedback
+
+    if 'ai_report_feedback' in st.session_state:
+        st.markdown(f"""<div style='background:rgba(0,255,0,0.05); padding:20px; border-left:4px solid #00FF00; margin-top:20px;'>
+            <b style='color:#00FF00;'>🤖 AI CHARLIE'S EVALUATION:</b><br><br>{st.session_state.ai_report_feedback}</div>""", unsafe_allow_html=True)
+
     st.write("")
     if st.button("← RETURN TO COMMAND CENTER", type="primary"):
         # Award XP and remove threat upon archive
         st.session_state.points += 10
         st.session_state.threat_log = [t for t in st.session_state.threat_log if t.get('ID') != case_data.get('ID')]
         st.session_state.active_case = None
+        if 'ai_report_feedback' in st.session_state: del st.session_state.ai_report_feedback
         st.rerun()
 
 
@@ -464,13 +505,13 @@ def ask_ai_charlie(query, threat_context=None, manual_key=None):
 
 def render_ai_analyst() -> None:
     ranks = [
-        "TIER 1 (ASSOCIATE ANALYST)", 
-        "TIER 2 (INCIDENT RESPONDER)", 
-        "TIER 3 (SENIOR INVESTIGATOR)", 
-        "THREAT HUNTER (PROFESSIONAL)", 
-        "INCIDENT COMMANDER (EXPERT)", 
-        "SOC ARCHITECT (MASTER)", 
-        "ADVANCE CYBER SECURITY PROFESSIONALS"
+        "◈ SENTINEL INITIATE (L1)", 
+        "◆ VECTOR OPERATOR (L2)", 
+        "❖ PROTOCOL ANALYST (L3)", 
+        "⌘ CORE RESPONDER (PRO)", 
+        "⫸ INCIDENT COMMANDER (EXPERT)", 
+        "⌬ SYSTEMS ARCHITECT (MASTER)", 
+        "🌐 DIGITAL SOVEREIGN (ADVANCED PROFESSIONAL)"
     ]
     points = st.session_state.get('points', 0)
     current_rank = ranks[min(points // 20, len(ranks)-1)]
@@ -610,6 +651,7 @@ def main() -> None:
         'next_interval': 10,
         'auto_step': 0,
         'breach_sim_active': False,
+        'remediation_step': 1,
         'active_case': None,
         'gemini_api_key': st.secrets.get("GEMINI_API_KEY", "")
     }

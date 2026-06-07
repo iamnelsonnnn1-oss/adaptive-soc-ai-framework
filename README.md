@@ -7,7 +7,7 @@
 
 ## The Mission
 **Empowering the next generation of defenders.**
-The Adaptive SOC AI Framework is a state-of-the-art, interactive **Cyber Range** and educational SIEM platform. Our mission is to provide students and security professionals with a high-stakes, "Live Fire" simulation environment. By blending automated Infrastructure-as-Code (IaC) with a real-time AI Mentor (**AI Charlie Analyst**), we transform complex threat telemetry into an interactive learning journey from Associate Analyst to Advance Cyber Security Professionals.
+The Adaptive SOC AI Framework is a state-of-the-art, interactive **Cyber Range** and educational SIEM platform. Our mission is to provide students and security professionals with a high-stakes, "Live Fire" simulation environment. By blending automated Infrastructure-as-Code (IaC) with a real-time AI Mentor (**AI Charlie Analyst**), we transform complex threat telemetry into a specialized digital defense learning journey from Sentinel Initiate to Digital Sovereign.
 
 This platform delivers adaptive threat detection and guided remediation using supervised learning, unsupervised behavioral analysis (**Isolation Forest**), and Large Language Model (LLM) integration.
 
@@ -63,7 +63,7 @@ The current dashboard is a demo-ready visual layer for the framework and will ev
 ## Core Principles
 
 * **Educational-First:** Bridging the gap between theory and field operations through gamified remediation.
-* **Gamified Progression:** Earn XP and rank up from Tier 1 Associate to Incident Commander.
+* **Gamified Progression:** Earn XP and rank up from Sentinel Initiate to Digital Sovereign.
 * **Adaptive:** Learns and evolves with threats.
 * **Modular:** Easily customizable per client or environment.
 * **Scalable:** Cloud-ready architecture utilizing European zones.
