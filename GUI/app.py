@@ -315,7 +315,8 @@ def render_active_threats() -> None:
         st.markdown(threat_html, unsafe_allow_html=True)
         
         if st.button(f"ANALYZE: {row['ID']}", key=f"feed_{row['ID']}"):
-            remediation_dialog(row.to_dict())
+            st.session_state.remediation_target = row.to_dict()
+            st.rerun()
 
 
 def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
@@ -427,13 +428,16 @@ def remediation_dialog(latest):
         for action in latest.get('Playbook', []):
             if st.button(f"INITIATE FINAL FIX: {action}", use_container_width=True):
                 if action == latest.get('Correct'):
-                    st.session_state.active_case = latest.copy()
-                    st.session_state.remediation_step = 1 # Reset for next
+                # Correct Playbook Selection: Progress to Step 8 (Case Profile)
+                st.session_state.active_case = latest.copy()
+                st.session_state.remediation_target = None
+                st.session_state.remediation_step = 1
                     st.rerun()
                 else:
                     st.error(f"MISSION FAILED: {latest.get('DistractorExplanations', {}).get(action, 'Incorrect protocol.')}")
 
     if st.button("Cancel Operation", use_container_width=True):
+        st.session_state.remediation_target = None
         st.session_state.remediation_step = 1
         st.rerun()
 
@@ -490,10 +494,15 @@ def render_case_profile(case_data):
         st.rerun()
 
 
-def ask_ai_charlie(query, threat_context=None, manual_key=None):
+def ask_ai_charlie(query, threat_context=None):
     try:
-        api_key = manual_key if manual_key else st.session_state.get('gemini_api_key')
-        if not api_key: return "AI Charlie's neural link is offline. (Missing API Key)"
+        # Neural Link Key Resolution
+        api_key = st.session_state.get('gemini_api_key')
+        if not api_key:
+            api_key = st.secrets.get("GEMINI_API_KEY")
+            
+        if not api_key or api_key == "":
+            return "AI Charlie's neural link is offline. (Missing API Key)"
         
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
@@ -511,7 +520,7 @@ def render_ai_analyst() -> None:
         "⌘ CORE RESPONDER (PRO)", 
         "⫸ INCIDENT COMMANDER (EXPERT)", 
         "⌬ SYSTEMS ARCHITECT (MASTER)", 
-        "🌐 DIGITAL SOVEREIGN (ADVANCED PROFESSIONAL)"
+        "🌐 DIGITAL SOVEREIGN (SME)"
     ]
     points = st.session_state.get('points', 0)
     current_rank = ranks[min(points // 20, len(ranks)-1)]
@@ -561,8 +570,8 @@ def render_ai_analyst() -> None:
 
     def handle_chat():
         query = st.session_state.ai_chat_input
-        if query and st.session_state.gemini_api_key:
-            ai_resp = ask_ai_charlie(query, latest.get('Vector') if latest else None, manual_key=st.session_state.gemini_api_key)
+        if query:
+            ai_resp = ask_ai_charlie(query, latest.get('Vector') if latest else None)
             st.session_state.chat_history.append({"user": query, "ai": ai_resp})
             st.session_state.ai_chat_input = "" # Clear the input
 
@@ -623,7 +632,8 @@ def render_incident_ledger() -> None:
         r_cols[4].markdown(f"<span style='color: #777777; font-size: 0.75rem; font-family: monospace;'>{t.get('MITRE')}</span>", unsafe_allow_html=True)
         
         if r_cols[5].button("OPEN", key=f"ledger_btn_{t.get('ID')}", use_container_width=True):
-            remediation_dialog(t)
+            st.session_state.remediation_target = t
+            st.rerun()
 
 
 def render_pipeline_status() -> None:
@@ -652,6 +662,7 @@ def main() -> None:
         'auto_step': 0,
         'breach_sim_active': False,
         'remediation_step': 1,
+        'remediation_target': None,
         'active_case': None,
         'gemini_api_key': st.secrets.get("GEMINI_API_KEY", "")
     }
@@ -659,6 +670,10 @@ def main() -> None:
     for key, val in session_defaults.items():
         if key not in st.session_state:
             st.session_state[key] = val
+
+    # Persistent Dialog Engine
+    if st.session_state.remediation_target:
+        remediation_dialog(st.session_state.remediation_target)
 
     # Case Overlay Check: This simulates the 'New Page'
     if st.session_state.active_case:
