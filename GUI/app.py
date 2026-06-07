@@ -322,20 +322,16 @@ def render_ai_engine_telemetry() -> None:
 
 
 def render_active_threats() -> None:
-    # Ensuring threat_log is defined and populated from session state before condition checks
     threat_log = st.session_state.get('threat_log', [])
-    
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
-    
-    # Hardened check to confirm data is not empty or None before proceeding
-    if threat_log is None or len(threat_log) == 0:
+
+    if not threat_log:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>ALL THREATS NEUTRALIZED. SECTOR CLEAR.</p>", unsafe_allow_html=True)
         return
 
     for row in threat_log:
         severity_color = {"Critical": "#00FF00", "High": "#FFFFFF", "Medium": "#777777", "Low": "#444444"}.get(row["Severity"], "#222222")
 
-        # Sanitization: Pre-flight check for external intelligence hyperlinks
         mitre_id = str(row.get("MITRE", ""))
         cve_id = str(row.get("CVE", ""))
         
@@ -775,45 +771,48 @@ def render_pipeline_status() -> None:
         st.markdown(card_html, unsafe_allow_html=True)
 
 
-def main() -> None:
-    # Initialize Hygiene Logic
-    perform_system_hygiene()
-
-    session_defaults = {
-        'threat_log': [],
-        'threat_count': 0,
-        'assets_count': 0,
-        'points': 0,
-        'prev_rank_idx': 0,
-        'last_error': "",
-        'last_auto_injection': time.time(),
-        'show_intel_feed': False,
-        'chat_history': [],
-        'show_intel': False,
-        'show_hint': False,
-        'next_interval': 10,
-        'auto_step': 0,
-        'breach_sim_active': False,
-        'remediation_step': 1,
-        'remediation_target': None,
-        'active_case': None,
-        'gemini_api_key': st.secrets.get("GEMINI_API_KEY", "")
+def initialize_session_state() -> None:
+    """Ensures all required tactical variables are initialized in the session state."""
+    defaults = {
+        "threat_log": [],
+        "threat_count": 0,
+        "assets_count": 0,
+        "points": 0,
+        "prev_rank_idx": 0,
+        "last_error": "",
+        "last_auto_injection": time.time(),
+        "show_intel_feed": False,
+        "chat_history": [],
+        "show_intel": False,
+        "show_hint": False,
+        "next_interval": 10,
+        "auto_step": 0,
+        "breach_sim_active": False,
+        "remediation_step": 1,
+        "remediation_target": None,
+        "active_case": None,
+        "gemini_api_key": st.secrets.get("GEMINI_API_KEY", ""),
+        "user_profile": None,
+        "triage_passed": False
     }
-    
-    for key, val in session_defaults.items():
+    for key, val in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = val
+
+
+def main() -> None:
+    initialize_session_state()
+    perform_system_hygiene()
 
     # Persistent Dialog Engine
     if st.session_state.remediation_target:
         remediation_dialog(st.session_state.remediation_target)
 
-    # Case Overlay Check: This simulates the 'New Page'
     if st.session_state.active_case:
         inject_custom_css(breach_active=False)
         render_header(st.session_state.threat_count, st.session_state.assets_count)
         render_case_profile(st.session_state.active_case)
-        st.stop() # Prevents rendering of the rest of the dashboard
+        st.stop()
 
     with st.sidebar:
         st.markdown("<p style='color: #FFFFFF; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
