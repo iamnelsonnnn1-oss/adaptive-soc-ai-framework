@@ -187,12 +187,39 @@ def get_system_health_data() -> dict:
 
 def get_active_threats_data() -> pd.DataFrame:
     threat_pool = [
-        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Correct": "Patch Log4j", "Insight": "Polymorphic payload detected. Obfuscated ${jndi:ldap} strings observed."},
-        {"ID": "TR-1082", "Severity": "High", "Source": "EDR-Core", "Vector": "PwnKit Escalation", "Status": "Active", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034", "Playbook": ["Remove SUID bit", "Patch Polkit", "Isolate Host"], "Correct": "Patch Polkit", "Insight": "Metamorphic exploit: binary signature cycling detected in runtime."},
-        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Sensor", "Vector": "runc Escape", "Status": "Active", "lat": 52.5200, "lon": 13.4050, "MITRE": "T1611", "CVE": "CVE-2024-21626", "Playbook": ["Update Runc", "ReadOnly RootFS", "Pod Security Policy"], "Correct": "Update Runc", "Insight": "Container escape via runc descriptor. Possible lateral movement."},
-        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", "Playbook": ["Disable SFTP", "Rotate DB Keys", "IP Blocklist"], "Correct": "IP Blocklist", "Insight": "Zero-day SQL injection in progress. Data exfiltration detected."},
-        {"ID": "TR-1085", "Severity": "High", "Source": "Falcon-X", "Vector": "PaperCut RCE", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1210", "CVE": "CVE-2023-27350", "Playbook": ["Update Server", "Firewall Port 9191", "Kill Java Process"], "Correct": "Update Server", "Insight": "Setup-mode bypass RCE. Metamorphic shellcode in memory."},
-        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Active", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966", "Playbook": ["Clear Sessions", "Update NetScaler", "Kill Active VPN"], "Correct": "Update NetScaler", "Insight": "Session hijacking without credentials. Active token theft."}
+        {
+            "ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", 
+            "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Correct": "Patch Log4j", 
+            "DistractorExplanations": {
+                "Disable JNDI": "Suboptimal. While it reduces surface area, the vulnerable library remains on disk and can be re-enabled.",
+                "WAF Filter": "Ineffective. Polymorphic payloads use nesting like ${${lower:j}ndi} to bypass static WAF strings."
+            },
+            "Hint": "Look for the most permanent remediation that targets the library version itself.",
+            "Steps": ["1. Identify all JAR files using Log4j < 2.17", "2. Update dependencies to latest patch", "3. Restart JVM instances."],
+            "Insight": "Polymorphic payload detected. Obfuscated ${jndi:ldap} strings observed."
+        },
+        {
+            "ID": "TR-1082", "Severity": "High", "Source": "EDR-Core", "Vector": "PwnKit Escalation", "Status": "Active", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034", 
+            "Playbook": ["Remove SUID bit", "Patch Polkit", "Isolate Host"], "Correct": "Patch Polkit",
+            "DistractorExplanations": {
+                "Remove SUID bit": "Tactically sound but fragile. A system update might restore the bit, re-opening the hole.",
+                "Isolate Host": "Overkill for a local privilege escalation if the workload is critical and patchable."
+            },
+            "Hint": "SUID bit removal is a temporary fix; what is the vendor-recommended path?",
+            "Steps": ["1. Check polkit version", "2. Execute 'apt upgrade polkit'", "3. Verify pkexec permissions."],
+            "Insight": "Metamorphic exploit: binary signature cycling detected in runtime."
+        },
+        {
+            "ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Sensor", "Vector": "runc Escape", "Status": "Active", "lat": 52.5200, "lon": 13.4050, "MITRE": "T1611", "CVE": "CVE-2024-21626", 
+            "Playbook": ["Update Runc", "ReadOnly RootFS", "Pod Security Policy"], "Correct": "Update Runc",
+            "DistractorExplanations": {
+                "ReadOnly RootFS": "Bypassable. An escape via file descriptor can still allow interaction with the host.",
+                "Pod Security Policy": "Admission controls don't fix a vulnerability already running in a container."
+            },
+            "Hint": "This is a core container runtime vulnerability. Focus on the engine.",
+            "Steps": ["1. Drain affected K8s node", "2. Update libcontainer/runc package", "3. Un-drain and verify runtime."],
+            "Insight": "Container escape via runc descriptor. Possible lateral movement."
+        }
     ]
     
     if 'threat_log' not in st.session_state:
