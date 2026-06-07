@@ -249,7 +249,7 @@ def get_base64_logo(file_path: str) -> str:
     return ""
 
 
-def render_header(threat_count: int = 0, assets_count: int = 0) -> None:
+def render_header(threat_count: int, assets_count: int) -> None:
     logo_path = os.path.join(os.path.dirname(__file__), "securex.png")
     if not os.path.exists(logo_path):
         logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
@@ -362,12 +362,6 @@ def ask_ai_charlie(query, threat_context=None):
 
 
 def render_ai_analyst() -> None:
-    if 'points' not in st.session_state: st.session_state.points = 0
-    if 'show_intel' not in st.session_state: st.session_state.show_intel = False
-    if 'show_hint' not in st.session_state: st.session_state.show_hint = False
-    if 'last_error' not in st.session_state: st.session_state.last_error = ""
-    if 'chat_history' not in st.session_state: st.session_state.chat_history = []
-
     ranks = [
         "TIER 1 (ASSOCIATE ANALYST)", 
         "TIER 2 (INCIDENT RESPONDER)", 
@@ -377,7 +371,8 @@ def render_ai_analyst() -> None:
         "SOC ARCHITECT (MASTER)", 
         "OFFICERS CLUB (SME)"
     ]
-    current_rank = ranks[min(st.session_state.points // 20, len(ranks)-1)]
+    points = st.session_state.get('points', 0)
+    current_rank = ranks[min(points // 20, len(ranks)-1)]
 
     threat_list = st.session_state.get('threat_log', [])
     if not threat_list or not isinstance(threat_list[0], dict):
@@ -431,6 +426,8 @@ def render_ai_analyst() -> None:
                 st.session_state.points += 10
                 st.session_state.threat_log.pop(0)
                 st.session_state.show_intel = False; st.session_state.show_hint = False; st.session_state.last_error = ""
+                st.session_state.threat_count += 0 # Keep total count but refresh display
+                st.session_state.assets_count += random.randint(1, 10) # Discovery XP
                 steps_list = latest.get('Steps', [])
                 steps = "\n".join(steps_list) if isinstance(steps_list, list) else "Steps not documented."
                 st.sidebar.success(f"CORRECT.\n\nFIELD STEPS:\n{steps}")
@@ -487,24 +484,24 @@ def render_pipeline_status() -> None:
 
 
 def main() -> None:
-    # Sovereign Initialization (GDPR Compliant: Volatile session telemetry only)
-    # These MUST stay at the very top of main() to avoid AttributeErrors in the UI
-    if 'threat_log' not in st.session_state:
-        st.session_state.threat_log = []
-    if 'threat_count' not in st.session_state:
-        st.session_state.threat_count = 0
-    if 'assets_count' not in st.session_state:
-        st.session_state.assets_count = 0
-    if 'points' not in st.session_state:
-        st.session_state.points = 0
-    if 'prev_rank_idx' not in st.session_state:
-        st.session_state.prev_rank_idx = 0
-    if 'last_error' not in st.session_state:
-        st.session_state.last_error = ""
-    if 'last_auto_injection' not in st.session_state:
-        st.session_state.last_auto_injection = time.time()
-    if 'show_intel_feed' not in st.session_state:
-        st.session_state.show_intel_feed = False
+    # Sovereign Initialization: Must execute before any UI calls to prevent crashes
+    session_defaults = {
+        'threat_log': [],
+        'threat_count': 0,
+        'assets_count': 0,
+        'points': 0,
+        'prev_rank_idx': 0,
+        'last_error': "",
+        'last_auto_injection': time.time(),
+        'show_intel_feed': False,
+        'chat_history': [],
+        'show_intel': False,
+        'show_hint': False
+    }
+    
+    for key, val in session_defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = val
 
     with st.sidebar:
         st.markdown("<p style='color: #FFFFFF; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
@@ -551,7 +548,7 @@ def main() -> None:
     active_breach_mode = breach_sim or (latest_critical is not None)
 
     inject_custom_css(breach_active=active_breach_mode)
-    render_header(st.session_state.get('threat_count', 0), st.session_state.get('assets_count', 0))
+    render_header(st.session_state.threat_count, st.session_state.assets_count)
 
     # SIEM Intelligence Window Overlay
     if st.session_state.get('show_intel_feed') and threat_list:
