@@ -480,6 +480,17 @@ def main() -> None:
     inject_custom_css(breach_active=active_breach_mode)
     render_header(st.session_state.get('threat_count', 0), st.session_state.get('assets_count', 0))
 
+    # SIEM Intelligence Window Overlay
+    if st.session_state.get('show_intel_feed') and threat_list:
+        latest = threat_list[0]
+        st.markdown(f"""
+            <div style="background: rgba(0, 40, 0, 0.85); border: 2px solid #00FF00; padding: 20px; border-radius: 5px; margin-bottom: 25px; backdrop-filter: blur(10px);">
+                <h3 style="color: #00FF00; margin: 0 0 10px 0;">📡 SIEM INTELLIGENCE FEED: {latest.get('ID')}</h3>
+                <p style="color: #FFFFFF; font-size: 0.9rem;"><b>Vector:</b> {latest.get('Vector')} | <b>Source:</b> {latest.get('Source')} | <b>Status:</b> {latest.get('Status')}</p>
+                <p style="color: #AAAAAA; font-size: 0.85rem; border-top: 1px solid rgba(0,255,0,0.2); padding-top: 10px;">{latest.get('Insight')}</p>
+            </div>
+        """, unsafe_allow_html=True)
+
     # Dynamic Map Zoom based on latest Critical Threat
     map_lat, map_lon = None, None
     if active_breach_mode and latest_critical:
