@@ -174,6 +174,16 @@ def get_system_health_data() -> dict:
 
 
 def get_active_threats_data() -> pd.DataFrame:
+    # Protocol: Check for local telemetry file ingestion
+    telemetry_path = os.path.join(os.path.dirname(__file__), "telemetry.json")
+    local_data = []
+    if os.path.exists(telemetry_path):
+        try:
+            with open(telemetry_path, "r") as f:
+                local_data = json.load(f)
+        except Exception:
+            pass
+
     threat_pool = [
         {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Intercepted", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228"},
         {"ID": "TR-1082", "Severity": "High", "Source": "Core Defense", "Vector": "PwnKit Escalation", "Status": "Isolating", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034"},
@@ -187,7 +197,10 @@ def get_active_threats_data() -> pd.DataFrame:
     ]
     
     if 'threat_log' not in st.session_state:
-        initial_log = random.sample(threat_pool, 4)
+        # Prioritize local telemetry and merge with random samples
+        full_pool = local_data + threat_pool
+        sample_size = min(len(full_pool), 4)
+        initial_log = random.sample(full_pool, sample_size)
         for item in initial_log:
             item["Time"] = datetime.now().strftime("%H:%M:%S")
         st.session_state.threat_log = initial_log

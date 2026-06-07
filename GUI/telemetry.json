@@ -1,0 +1,13 @@
+[
+  {
+    "ID": "TR-LOCAL-01",
+    "Severity": "Critical",
+    "Source": "Local-Sensor",
+    "Vector": "Zero-Day Buffer Overflow",
+    "Status": "Analyzing",
+    "lat": 38.8977,
+    "lon": -77.0365,
+    "MITRE": "T1203",
+    "CVE": "CVE-2023-XXXXX"
+  }
+]
