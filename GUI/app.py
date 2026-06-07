@@ -10,6 +10,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import time
 import google.generativeai as genai
+import boto3
 
 
 # --- TACTICAL DATA MODELS ---
@@ -233,15 +234,32 @@ def get_ai_engine_metrics() -> dict:
 
 
 def get_active_threats_data() -> pd.DataFrame:
-    telemetry_path = os.path.join(os.path.dirname(__file__), "telemetry.json")
     local_data = []
-    if os.path.exists(telemetry_path):
+    
+    # Attempt to fetch from AWS S3 if credentials exist
+    if "AWS_ACCESS_KEY_ID" in st.secrets:
         try:
-            with open(telemetry_path, "r") as f:
-                local_data = json.load(f)
-        except Exception:
-            pass
-
+            s3 = boto3.client(
+                's3',
+                aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
+                aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
+                region_name=st.secrets.get("AWS_DEFAULT_REGION", "eu-central-1")
+            )
+            response = s3.get_object(Bucket=st.secrets["S3_BUCKET_NAME"], Key="telemetry.json")
+            local_data = json.loads(response['Body'].read().decode('utf-8'))
+        except Exception as e:
+            st.sidebar.error(f"S3 Fetch Failed: {str(e)}")
+    
+    # Fallback to local file if S3 fetch fails or isn't configured
+    if not local_data:
+        telemetry_path = os.path.join(os.path.dirname(__file__), "telemetry.json")
+        if os.path.exists(telemetry_path):
+            try:
+                with open(telemetry_path, "r") as f:
+                    local_data = json.load(f)
+            except Exception:
+                pass
+    
     threat_pool = [
         {
             "ID": "TR-1001", "Severity": "Low", "Source": "Edge-Sec", "Vector": "Phishing Attempt", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1566.001", "CVE": "N/A",
@@ -322,10 +340,11 @@ def render_ai_engine_telemetry() -> None:
 
 
 def render_active_threats() -> None:
-    threat_log = st.session_state.get('threat_log', [])
+    # Ensure local threat_log is assigned before any logic or conditional checks
+    threat_log = st.session_state.get("threat_log", [])
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
 
-    if not threat_log:
+    if threat_log is None or len(threat_log) == 0:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>ALL THREATS NEUTRALIZED. SECTOR CLEAR.</p>", unsafe_allow_html=True)
         return
 
@@ -876,7 +895,6 @@ def main() -> None:
         st.markdown("<br><br><br><br>", unsafe_allow_html=True)
         st.markdown("<div style='border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;'><p style='color: #555555; font-size: 0.6rem; line-height: 1.2;'>// GDPR COMPLIANCE: THIS SYSTEM PROCESSES TEMPORARY IP DATA FOR GEOSPATIAL PROJECTION. DATA IS VOLATILE AND NOT PERSISTED BEYOND THE ACTIVE SESSION. [ FRAMEWORK VERSION 1.0 ]</p></div>", unsafe_allow_html=True)
 
-    # TACTICAL ENGINE: Automatic Breach Trigger Logic
     threat_log = st.session_state.get('threat_log', [])
     latest_critical = next((t for t in threat_log if t.get("Severity") == "Critical"), None)
     active_breach_mode = breach_sim or (latest_critical is not None)
