@@ -365,9 +365,11 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     st.pydeck_chart(r)
 
 
-def ask_ai_charlie(query, threat_context=None):
+def ask_ai_charlie(query, threat_context=None, manual_key=None):
     try:
-        api_key = st.secrets.get("GEMINI_API_KEY")
+        # Priority: Manual Input > Streamlit Secrets
+        api_key = manual_key if manual_key else st.secrets.get("GEMINI_API_KEY")
+        
         if not api_key:
             return "AI Charlie's neural link is offline. (Missing API Key)"
         
@@ -426,14 +428,22 @@ def render_ai_analyst() -> None:
     </div>
     """, unsafe_allow_html=True)
 
-    # Student Chat Input
-    user_query = st.sidebar.text_input("Ask Charlie for help:", key="ai_chat_input")
-    if user_query:
-        with st.sidebar:
-            with st.spinner("Analyzing..."):
-                ai_resp = ask_ai_charlie(user_query, latest.get('Vector'))
-                st.session_state.chat_history.append({"user": user_query, "ai": ai_resp})
-                st.rerun()
+    # Neural Link Status & API Key Override
+    api_key = st.secrets.get("GEMINI_API_KEY")
+    if not api_key:
+        api_key = st.sidebar.text_input("🔗 Neural Link (Gemini API Key):", type="password", help="Get a free key from Google AI Studio")
+
+    # Student Chat Input with auto-clear logic
+    if "temp_query" not in st.session_state: st.session_state.temp_query = ""
+    
+    def handle_chat():
+        query = st.session_state.ai_chat_input
+        if query and api_key:
+            ai_resp = ask_ai_charlie(query, latest.get('Vector') if latest else None, manual_key=api_key)
+            st.session_state.chat_history.append({"user": query, "ai": ai_resp})
+            st.session_state.ai_chat_input = "" # Clear the input
+
+    st.sidebar.text_input("Ask Charlie for help:", key="ai_chat_input", on_change=handle_chat)
 
     c1, c2 = st.sidebar.columns(2)
     if c1.button("📡 INTEL", key="intel_btn", use_container_width=True):
