@@ -340,11 +340,12 @@ def render_ai_engine_telemetry() -> None:
 
 
 def render_active_threats() -> None:
-    # Ensure local threat_log is assigned before any logic or conditional checks
+    """Renders the live telemetry feed with safety checks for undefined variables."""
     threat_log = st.session_state.get("threat_log", [])
+    
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
 
-    if threat_log is None or len(threat_log) == 0:
+    if not threat_log or threat_log is None:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>ALL THREATS NEUTRALIZED. SECTOR CLEAR.</p>", unsafe_allow_html=True)
         return
 
@@ -366,67 +367,52 @@ def render_active_threats() -> None:
 
 
 def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
+    """Renders the pydeck geospatial engine in the center command column."""
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// GEOSPATIAL TELEMETRY</p>", unsafe_allow_html=True)
 
     try:
-        # GDPR Compliance: Use HTTPS for secure PII (IP) transmission and add timeout
         response = urlopen('https://ip-api.com/json', timeout=5)
         data = json.load(response)
         curr_lat, curr_lon = data['lat'], data['lon']
     except:
-        # Fallback to a neutral coordinate if geolocation fails or is blocked for privacy
         curr_lat, curr_lon = 51.5074, -0.1278
 
-    threats = pd.DataFrame(st.session_state.get('threat_log', []))
+    threat_log = st.session_state.get('threat_log', [])
+    threats_df = pd.DataFrame(threat_log)
     
     view_lat = zoom_lat if zoom_lat else curr_lat
     view_lon = zoom_lon if zoom_lon else curr_lon
     zoom_level = 10 if zoom_lat else 2
-    if not threats.empty:
-        threats['target_lat'] = curr_lat
-        threats['target_lon'] = curr_lon
+
+    if not threats_df.empty:
+        threats_df['target_lat'] = curr_lat
+        threats_df['target_lon'] = curr_lon
     
     scatterplot = pdk.Layer(
         "ScatterplotLayer",
-        threats,
+        threats_df,
         get_position=["lon", "lat"],
         get_color="[0, 255, 0, 160]",
         get_radius=150000,
         pickable=True
     )
-
     arclayer = pdk.Layer(
         "ArcLayer",
-        threats,
+        threats_df,
         get_source_position=["lon", "lat"],
         get_target_position=["target_lon", "target_lat"],
         get_source_color=[0, 255, 0, 80],
         get_target_color=[0, 255, 0, 255],
         get_width=3,
-        animation_speed=2,
-    )
-    
-    view_state = pdk.ViewState(
-        latitude=view_lat,
-        longitude=view_lon,
-        zoom=zoom_level,
-        pitch=45,
     )
     
     r = pdk.Deck(
         layers=[arclayer, scatterplot],
-        initial_view_state=view_state,
-        map_style="mapbox://styles/mapbox/satellite-streets-v11",
+        initial_view_state=pdk.ViewState(latitude=view_lat, longitude=view_lon, zoom=zoom_level, pitch=45),
+        map_style="dark",
         tooltip={
             "html": """
-                <div style="background: rgba(0, 10, 0, 0.9); border: 1px solid #00FF00; padding: 12px; color: #FFFFFF; font-family: monospace; font-size: 0.8rem;">
-                    <b style="color: #00FF00; font-size: 0.9rem;">[ INCIDENT: {ID} ]</b><br/>
-                    <hr style="border: 0; border-top: 1px solid rgba(0,255,0,0.2); margin: 5px 0;">
-                    <b>VECTOR:</b> {Vector}<br/>
-                    <b>SOURCE:</b> {Source}<br/>
-                    <b>MITRE:</b> {MITRE} | <b>CVE:</b> {CVE}<br/>
-                    <b>STATUS:</b> <span style="color: #00FF00;">{Status}</span>
-                </div>
+                <b>ID:</b> {ID}<br><b>Vector:</b> {Vector}<br><b>Status:</b> {Status}
             """,
             "style": {"backgroundColor": "transparent", "color": "white", "padding": "0"}
         }
@@ -639,7 +625,7 @@ def render_ai_analyst() -> None:
     points = st.session_state.get('points', 0) + (st.session_state.user_profile['xp'] if st.session_state.user_profile else 0)
     current_rank = ranks[min(points // 20, len(ranks)-1)]
 
-    threat_log = st.session_state.get('threat_log', [])
+    threat_log = st.session_state.get("threat_log", [])
     if not threat_log or not isinstance(threat_log[0], dict):
         st.sidebar.markdown('<div class="analyst-terminal">> SYSTEM SECURE.<br>> NO ACTIVE THREATS.</div>', unsafe_allow_html=True)
         return
@@ -719,7 +705,7 @@ def render_ai_analyst() -> None:
 
 def render_incident_ledger() -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 40px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// MASTER INCIDENT LEDGER</p>", unsafe_allow_html=True)
-    threat_log = st.session_state.get('threat_log', [])
+    threat_log = st.session_state.get("threat_log", [])
     
     st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 20px 0;'>", unsafe_allow_html=True)
 
@@ -753,7 +739,7 @@ def render_incident_ledger() -> None:
 def render_risk_dashboard() -> None:
     """Aggregated risk assessment mirroring Chronicle/Splunk SOC views."""
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// COMMAND RISK ASSESSMENT</p>", unsafe_allow_html=True)
-    threat_log = st.session_state.get('threat_log', [])
+    threat_log = st.session_state.get("threat_log", [])
     critical_count = len([t for t in threat_log if t.get('Severity') == 'Critical'])
     
     # Dynamic Scoring Logic
