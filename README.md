@@ -1,9 +1,11 @@
 # Adaptive SOC AI Framework
 **Version: 1.0**
 
-A fully automated, Infrastructure-as-Code (IaC) driven Security Operations Center (SOC) framework with integrated SIEM, SOAR, and AI-driven anomaly detection.
+## The Mission
+**Empowering the next generation of defenders.**
+The Adaptive SOC AI Framework is a state-of-the-art, interactive **Cyber Range** and educational SIEM platform. Our mission is to provide students and security professionals with a high-stakes, "Live Fire" simulation environment. By blending automated Infrastructure-as-Code (IaC) with a real-time AI Mentor (**AI Charlie Analyst**), we transform complex threat telemetry into an interactive learning journey from Associate Analyst to the Officers Club.
 
-This platform is designed to deliver adaptive threat detection and automated response using both supervised and unsupervised learning (**Isolation Forest**), built on a modular and scalable architecture.
+This platform delivers adaptive threat detection and guided remediation using supervised learning, unsupervised behavioral analysis (**Isolation Forest**), and Large Language Model (LLM) integration.
 
 ---
 
@@ -11,7 +13,7 @@ This platform is designed to deliver adaptive threat detection and automated res
 
 Explore the hosted dashboard demo here:
 
-[Adaptive SOC AI Framework Demo](https://adaptive-soc-ai-framework-dtbnsixgfu2hxktqwvwjwb.streamlit.app/)
+[Live SECUREX COMMAND Cyber Range](https://adaptive-soc-ai-framework-dtbnsixgfu2hxktqwvwjwb.streamlit.app/)
 
 The current dashboard is a demo-ready visual layer for the framework and will evolve from mock data to live API-backed telemetry as the platform matures.
 
@@ -27,6 +29,8 @@ The current dashboard is a demo-ready visual layer for the framework and will ev
 
 ## AI Capabilities
 
+* **AI Charlie Analyst:** A real-time SLM (Small Language Model) co-pilot that mentors students through triage playbooks.
+* **Generative Mentorship:** Dynamic explanations of "Why" specific remediation steps are chosen, mapped to NIST standards.
 * **Supervised Learning:** Detects known threats and categorized attack patterns.
 * **Unsupervised Learning:** Isolation Forest for behavior-based anomaly detection.
 * **Behavioral Analysis:** Identifies zero-day threats by monitoring system baselines.
@@ -54,6 +58,8 @@ The current dashboard is a demo-ready visual layer for the framework and will ev
 
 ## Core Principles
 
+* **Educational-First:** Bridging the gap between theory and field operations through gamified remediation.
+* **Gamified Progression:** Earn XP and rank up from Tier 1 Associate to Incident Commander.
 * **Adaptive:** Learns and evolves with threats.
 * **Modular:** Easily customizable per client or environment.
 * **Scalable:** Cloud-ready architecture utilizing European zones.
