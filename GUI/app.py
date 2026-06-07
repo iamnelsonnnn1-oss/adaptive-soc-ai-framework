@@ -324,7 +324,7 @@ def render_ai_engine_telemetry() -> None:
 def render_active_threats() -> None:
     threat_log = st.session_state.get('threat_log', [])
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
-    if threat_log is None or len(threat_log) == 0:
+    if not threat_log:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>ALL THREATS NEUTRALIZED. SECTOR CLEAR.</p>", unsafe_allow_html=True)
         return
 
@@ -350,10 +350,12 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// GEOSPATIAL TELEMETRY</p>", unsafe_allow_html=True)
 
     try:
-        response = urlopen('http://ip-api.com/json')
+        # GDPR Compliance: Use HTTPS for secure PII (IP) transmission and add timeout
+        response = urlopen('https://ip-api.com/json', timeout=5)
         data = json.load(response)
         curr_lat, curr_lon = data['lat'], data['lon']
     except:
+        # Fallback to a neutral coordinate if geolocation fails or is blocked for privacy
         curr_lat, curr_lon = 51.5074, -0.1278
 
     threats = pd.DataFrame(st.session_state.get('threat_log', []))
@@ -557,7 +559,12 @@ def ask_ai_charlie(query, threat_context=None):
         prompt = f"You are AI Charlie, an expert SOC mentor. Incident: {threat_context}. Student asks: {query}. Keep it technical."
         response = model.generate_content(prompt)
         return response.text
-    except Exception as e: return f"Neural Link Error: {str(e)}"
+    except Exception as e:
+        # Avoid leaking full stack traces or internal API details in the UI
+        error_msg = str(e)
+        if "API_KEY_INVALID" in error_msg:
+            return "Neural Link Error: The provided API Key is invalid or expired."
+        return "Neural Link Error: Unable to establish connection to AI Charlie. Check network or API quotas."
 
 
 def render_user_profile() -> None:
@@ -613,12 +620,12 @@ def render_ai_analyst() -> None:
     points = st.session_state.get('points', 0) + (st.session_state.user_profile['xp'] if st.session_state.user_profile else 0)
     current_rank = ranks[min(points // 20, len(ranks)-1)]
 
-    threat_list = st.session_state.get('threat_log', [])
-    if not threat_list or not isinstance(threat_list[0], dict):
+    threat_log = st.session_state.get('threat_log', [])
+    if not threat_log or not isinstance(threat_log[0], dict):
         st.sidebar.markdown('<div class="analyst-terminal">> SYSTEM SECURE.<br>> NO ACTIVE THREATS.</div>', unsafe_allow_html=True)
         return
 
-    latest = threat_list[0]
+    latest = threat_log[0]
     
     intel_text = ""
     if st.session_state.show_intel and latest:
@@ -693,11 +700,11 @@ def render_ai_analyst() -> None:
 
 def render_incident_ledger() -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 40px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// MASTER INCIDENT LEDGER</p>", unsafe_allow_html=True)
-    threat_list = st.session_state.get('threat_log', [])
+    threat_log = st.session_state.get('threat_log', [])
     
     st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 20px 0;'>", unsafe_allow_html=True)
 
-    if not threat_list:
+    if not threat_log:
         st.markdown("<p style='color: #444444; font-size: 0.8rem; font-family: monospace;'>[SYSTEM MESSAGE]: LEDGER EMPTY. NO CURRENT INCIDENTS RECORDED.</p>", unsafe_allow_html=True)
         return
 
@@ -708,7 +715,7 @@ def render_incident_ledger() -> None:
 
     st.markdown("<hr style='border: 0; border-top: 1px solid rgba(0,255,0,0.2); margin: 5px 0 15px 0;'>", unsafe_allow_html=True)
 
-    for t in threat_list:
+    for t in threat_log:
         row_cols = st.columns([1, 1, 1, 3, 1, 1])
         sev = t.get("Severity", "Low").upper()
         color = "#00FF00" if sev == "CRITICAL" else "#FFFFFF" if sev == "HIGH" else "#777777"
@@ -727,11 +734,11 @@ def render_incident_ledger() -> None:
 def render_risk_dashboard() -> None:
     """Aggregated risk assessment mirroring Chronicle/Splunk SOC views."""
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// COMMAND RISK ASSESSMENT</p>", unsafe_allow_html=True)
-    threat_list = st.session_state.get('threat_log', [])
-    critical_count = len([t for t in threat_list if t.get('Severity') == 'Critical'])
+    threat_log = st.session_state.get('threat_log', [])
+    critical_count = len([t for t in threat_log if t.get('Severity') == 'Critical'])
     
     # Dynamic Scoring Logic
-    system_risk = min(100, (len(threat_list) * 5) + (critical_count * 20))
+    system_risk = min(100, (len(threat_log) * 5) + (critical_count * 20))
     user_risk = 12 # Mocked baseline
     entity_risk = critical_count * 15
     
@@ -867,8 +874,8 @@ def main() -> None:
         st.markdown("<div style='border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;'><p style='color: #555555; font-size: 0.6rem; line-height: 1.2;'>// GDPR COMPLIANCE: THIS SYSTEM PROCESSES TEMPORARY IP DATA FOR GEOSPATIAL PROJECTION. DATA IS VOLATILE AND NOT PERSISTED BEYOND THE ACTIVE SESSION. [ FRAMEWORK VERSION 1.0 ]</p></div>", unsafe_allow_html=True)
 
     # TACTICAL ENGINE: Automatic Breach Trigger Logic
-    threat_list = st.session_state.get('threat_log', [])
-    latest_critical = next((t for t in threat_list if t.get("Severity") == "Critical"), None)
+    threat_log = st.session_state.get('threat_log', [])
+    latest_critical = next((t for t in threat_log if t.get("Severity") == "Critical"), None)
     active_breach_mode = breach_sim or (latest_critical is not None)
 
     inject_custom_css(breach_active=active_breach_mode)
@@ -879,8 +886,8 @@ def main() -> None:
     render_global_intel()
 
     # SIEM Intelligence Window Overlay
-    if st.session_state.get('show_intel_feed') and threat_list:
-        latest = threat_list[0]
+    if st.session_state.get('show_intel_feed') and threat_log:
+        latest = threat_log[0]
         st.markdown(f"""
             <div style="background: rgba(0, 40, 0, 0.85); border: 2px solid #00FF00; padding: 20px; border-radius: 5px; margin-bottom: 25px; backdrop-filter: blur(10px);">
                 <h3 style="color: #00FF00; margin: 0 0 10px 0;">📡 SIEM INTELLIGENCE FEED: {latest.get('ID')}</h3>
