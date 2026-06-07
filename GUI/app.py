@@ -322,9 +322,13 @@ def render_ai_engine_telemetry() -> None:
 
 
 def render_active_threats() -> None:
+    # Ensuring threat_log is defined and populated from session state before condition checks
     threat_log = st.session_state.get('threat_log', [])
+    
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
-    if not threat_log:
+    
+    # Hardened check to confirm data is not empty or None before proceeding
+    if threat_log is None or len(threat_log) == 0:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>ALL THREATS NEUTRALIZED. SECTOR CLEAR.</p>", unsafe_allow_html=True)
         return
 
