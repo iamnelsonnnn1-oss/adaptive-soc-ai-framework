@@ -1,7 +1,9 @@
 # Adaptive SOC AI Framework
 **Version: 1.0**
 
-![SECUREX Logo](securex.png)
+<p align="center">
+  <img src="securex.png" width="300" alt="SECUREX Logo">
+</p>
 
 ## The Mission
 **Empowering the next generation of defenders.**

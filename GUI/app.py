@@ -54,7 +54,7 @@ def inject_custom_css(breach_active: bool = False) -> None:
             padding: 15px;
             font-family: 'Courier New', monospace;
             color: #00FF00;
-            height: 350px;
+            height: 250px;
             overflow-y: auto;
             margin-bottom: 20px;
             box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.2);
@@ -276,9 +276,9 @@ def get_base64_logo(file_path: str) -> str:
     return ""
 
 
-def render_header(threat_count: int, assets_count: int) -> None:
+def render_header(threat_count: int = 0, assets_count: int = 0) -> None:
     logo_b64 = get_base64_logo(logo_path)
-    logo_html = f'<img class="logo-img" src="data:image/png;base64,{logo_b64}" style="height:150px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">' if logo_b64 else ""
+    logo_html = f'<img class="logo-img" src="data:image/png;base64,{logo_b64}" style="height:100px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">' if logo_b64 else ""
     
     header_html = f'<div class="header-container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;width:100%;"><div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:2.2rem;font-weight:900;letter-spacing:4px;color:#00FF00;">SECUREX COMMAND</h1><p style="color:#FFFFFF;margin:5px 0 0 0;font-size:0.85rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div class="header-metrics" style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;justify-content:center;"><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#00FF00;font-weight:bold;font-size:1.2rem;">{threat_count}</div></div><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">{assets_count:,}</div></div><div style="background:#000000;border:1px solid #00FF00;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#00FF00;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
     st.markdown(header_html, unsafe_allow_html=True)
@@ -304,6 +304,8 @@ def render_active_threats() -> None:
         severity_color = {"Critical": "#00FF00", "High": "#FFFFFF", "Medium": "#777777", "Low": "#444444"}.get(row["Severity"], "#222222")
         threat_html = f'<div style="margin-bottom:12px;border-left:2px solid {severity_color};padding-left:10px;"><div style="font-size:0.75rem;color:#FFFFFF;">[{row["Time"]}] <span style="color:{severity_color};">{row["Source"]}</span></div><div style="font-size:0.8rem;color:#FFFFFF;font-weight:bold;">{row["Vector"]}</div><div style="font-size:0.7rem;color:#00FF00;margin-top:2px;font-family:\'Courier New\',monospace;"><a href="https://attack.mitre.org/techniques/{row.get("MITRE", "")}/" target="_blank" style="color:#00FF00;text-decoration:none;">{row.get("MITRE", "")}</a> | <a href="https://nvd.nist.gov/vuln/detail/{row.get("CVE", "")}" target="_blank" style="color:#00FF00;text-decoration:none;">{row.get("CVE", "")}</a></div></div>'
         st.markdown(threat_html, unsafe_allow_html=True)
+        if st.button(f"ANALYZE: {row['ID']}", key=f"feed_{row['ID']}"):
+            remediation_dialog(row.to_dict())
 
 
 def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
@@ -462,8 +464,9 @@ def render_ai_analyst() -> None:
                 st.session_state.show_intel = False; st.session_state.show_hint = False; st.session_state.last_error = ""
                 st.session_state.threat_count += 0 # Keep total count but refresh display
                 st.session_state.assets_count += random.randint(1, 10) # Discovery XP
-                steps_list = latest.get('Steps', [])
-                steps = "\n".join(steps_list) if isinstance(steps_list, list) else "Steps not documented."
+                s_list = latest.get('Steps', [])
+                # Handle Pandas NaN conversion to float
+                steps = "\n".join(s_list) if isinstance(s_list, list) else "Steps not documented for this vector."
                 st.sidebar.success(f"CORRECT.\n\nFIELD STEPS:\n{steps}")
                 st.rerun()
             else:
@@ -472,41 +475,36 @@ def render_ai_analyst() -> None:
 
 
 def render_incident_ledger() -> None:
-    st.markdown("<p style='color: #FFFFFF; margin: 30px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// MASTER INCIDENT LEDGER</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #FFFFFF; margin: 40px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// MASTER INCIDENT LEDGER [ INTERACTIVE ]</p>", unsafe_allow_html=True)
     threat_list = st.session_state.get('threat_log', [])
     
+    st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 20px 0;'>", unsafe_allow_html=True)
+
     if not threat_list:
         st.markdown("<p style='color: #444444; font-size: 0.8rem; font-family: monospace;'>[SYSTEM MESSAGE]: LEDGER EMPTY. NO CURRENT INCIDENTS RECORDED.</p>", unsafe_allow_html=True)
         return
 
-    table_rows = ""
+    # Create header
+    h_cols = st.columns([1, 1, 1, 3, 1, 1])
+    cols_meta = ["TIMESTAMP", "SEVERITY", "ID", "VECTOR", "MITRE", "ACTION"]
+    for col, label in zip(h_cols, cols_meta):
+        col.markdown(f"<span style='color: #00FF00; font-size: 0.7rem; font-weight: bold;'>{label}</span>", unsafe_allow_html=True)
+
+    st.markdown("<hr style='border: 0; border-top: 1px solid rgba(0,255,0,0.2); margin: 5px 0 15px 0;'>", unsafe_allow_html=True)
+
     for t in threat_list:
-        color = "#444444"
-        sev = t.get("Severity", "Low")
-        if sev == "Critical": color = "#00FF00"
-        elif sev == "High": color = "#FFFFFF"
-        elif sev == "Medium": color = "#777777"
-
-        table_rows += f"""
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); font-family: monospace;">
-            <td style="padding: 12px; color: #777777;">{t.get('Time')}</td>
-            <td style="padding: 12px; font-weight: bold; color: {color};">{sev.upper()}</td>
-            <td style="padding: 12px; color: #FFFFFF;">{t.get('ID')}</td>
-            <td style="padding: 12px; color: #FFFFFF;">{t.get('Vector')}</td>
-            <td style="padding: 12px; color: #777777;">{t.get('MITRE')}</td>
-            <td style="padding: 12px; color: #00FF00; font-weight: bold;">{t.get('Status')}</td>
-        </tr>"""
-
-    ledger_html = f"""
-    <div style="background: rgba(10, 15, 24, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; width: 100%; overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;">
-            <thead style="background: rgba(0, 255, 0, 0.03); border-bottom: 1px solid rgba(0, 255, 0, 0.2);">
-                <tr><th style="padding: 12px; color: #00FF00;">TIMESTAMP</th><th style="padding: 12px; color: #00FF00;">SEVERITY</th><th style="padding: 12px; color: #00FF00;">INCIDENT_ID</th><th style="padding: 12px; color: #00FF00;">ATTACK_VECTOR</th><th style="padding: 12px; color: #00FF00;">MITRE_REF</th><th style="padding: 12px; color: #00FF00;">OPS_STATUS</th></tr>
-            </thead>
-            <tbody>{table_rows}</tbody>
-        </table>
-    </div>"""
-    st.markdown(ledger_html, unsafe_allow_html=True)
+        r_cols = st.columns([1, 1, 1, 3, 1, 1])
+        sev = t.get("Severity", "Low").upper()
+        color = "#00FF00" if sev == "CRITICAL" else "#FFFFFF" if sev == "HIGH" else "#777777"
+        
+        r_cols[0].markdown(f"<span style='color: #777777; font-size: 0.75rem; font-family: monospace;'>{t.get('Time')}</span>", unsafe_allow_html=True)
+        r_cols[1].markdown(f"<span style='color: {color}; font-size: 0.75rem; font-weight: bold; font-family: monospace;'>{sev}</span>", unsafe_allow_html=True)
+        r_cols[2].markdown(f"<span style='color: #FFFFFF; font-size: 0.75rem; font-family: monospace;'>{t.get('ID')}</span>", unsafe_allow_html=True)
+        r_cols[3].markdown(f"<span style='color: #FFFFFF; font-size: 0.75rem; font-family: monospace;'>{t.get('Vector')}</span>", unsafe_allow_html=True)
+        r_cols[4].markdown(f"<span style='color: #777777; font-size: 0.75rem; font-family: monospace;'>{t.get('MITRE')}</span>", unsafe_allow_html=True)
+        
+        if r_cols[5].button("OPEN", key=f"ledger_btn_{t.get('ID')}", use_container_width=True):
+            remediation_dialog(t)
 
 
 def render_pipeline_status() -> None:
