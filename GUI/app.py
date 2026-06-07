@@ -185,15 +185,15 @@ def get_active_threats_data() -> pd.DataFrame:
             pass
 
     threat_pool = [
-        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Intercepted", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228"},
-        {"ID": "TR-1082", "Severity": "High", "Source": "Core Defense", "Vector": "PwnKit Escalation", "Status": "Isolating", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034"},
-        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Linter", "Vector": "runc Escape", "Status": "Triaged", "lat": 52.5200, "lon": 13.4050, "MITRE": "T1611", "CVE": "CVE-2024-21626"},
-        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Blocking", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362"},
-        {"ID": "TR-1085", "Severity": "High", "Source": "LimaCharlie", "Vector": "PaperCut RCE", "Status": "Killing", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1210", "CVE": "CVE-2023-27350"},
-        {"ID": "TR-1086", "Severity": "Medium", "Source": "Suricata", "Vector": "ProxyNotShell", "Status": "Logged", "lat": 35.6762, "lon": 139.6503, "MITRE": "T1190", "CVE": "CVE-2022-41040"},
-        {"ID": "TR-1087", "Severity": "Low", "Source": "Kube-Linter", "Vector": "DirtyPipe Exploit", "Status": "Triaged", "lat": -33.8688, "lon": 151.2093, "MITRE": "T1068", "CVE": "CVE-2022-0847"},
-        {"ID": "TR-1088", "Severity": "High", "Source": "CloudTrail", "Vector": "Okta Session Hijack", "Status": "Suspending", "lat": 25.2048, "lon": 55.2708, "MITRE": "T1539", "CVE": "IDP-Exploit"},
-        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Filtering", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966"}
+        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Insight": "Polymorphic payload detected. Attackers are obfuscating ${jndi:ldap} strings to bypass WAF."},
+        {"ID": "TR-1082", "Severity": "High", "Source": "Core Defense", "Vector": "PwnKit Escalation", "Status": "Active", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034", "Playbook": ["Remove SUID bit", "Update Polkit", "Isolate Host"], "Insight": "Metamorphic exploit attempt. The binary signature changes every execution to evade EDR."},
+        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Linter", "Vector": "runc Escape", "Status": "Active", "lat": 52.5200, "lon": 13.4050, "MITRE": "T1611", "CVE": "CVE-2024-21626", "Playbook": ["Update Runc", "ReadOnly RootFS", "Pod Security Policy"], "Insight": "Container escape detected. High risk of lateral movement to control plane."},
+        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", "Playbook": ["Disable SFTP", "Rotate DB Keys", "IP Blocklist"], "Insight": "Zero-day SQL injection in file transfer service. Immediate exfiltration in progress."},
+        {"ID": "TR-1085", "Severity": "High", "Source": "LimaCharlie", "Vector": "PaperCut RCE", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1210", "CVE": "CVE-2023-27350", "Playbook": ["Update Server", "Firewall Port 9191", "Kill Java Proc"], "Insight": "Remote code execution via setup-mode bypass. Metamorphic shellcode observed."},
+        {"ID": "TR-1086", "Severity": "Medium", "Source": "Suricata", "Vector": "ProxyNotShell", "Status": "Active", "lat": 35.6762, "lon": 139.6503, "MITRE": "T1190", "CVE": "CVE-2022-41040", "Playbook": ["PowerShell Rewrite", "Patch Exchange", "Disable Remote PS"], "Insight": "SSRF in Exchange Server. Attempting to reach internal API endpoints."},
+        {"ID": "TR-1087", "Severity": "Low", "Source": "Kube-Linter", "Vector": "DirtyPipe Exploit", "Status": "Active", "lat": -33.8688, "lon": 151.2093, "MITRE": "T1068", "CVE": "CVE-2022-0847", "Playbook": ["Update Kernel", "Limit Syscalls", "Reboot Node"], "Insight": "Local privilege escalation via pipe buffer corruption."},
+        {"ID": "TR-1088", "Severity": "High", "Source": "CloudTrail", "Vector": "Okta Session Hijack", "Status": "Active", "lat": 25.2048, "lon": 55.2708, "MITRE": "T1539", "CVE": "IDP-Exploit", "Playbook": ["Revoke Token", "Enforce MFA", "Suspend User"], "Insight": "Cross-tenant identity impersonation detected via session token theft."},
+        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Active", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966", "Playbook": ["Clear Sessions", "Update NetScaler", "Kill Active VPN"], "Insight": "Information disclosure vulnerability allowing session hijacking without credentials."}
     ]
     
     if 'threat_log' not in st.session_state:
@@ -256,8 +256,8 @@ def render_active_threats() -> None:
 
 def render_anomaly_map() -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// LIVE GEOSPATIAL TELEMETRY [ SATELLITE MODE ]</p>", unsafe_allow_html=True)
-    
-    # 1. Attempt to get current location from IP (Fall back to London HQ if fails)
+
+    # Determine "Home" location
     try:
         url = 'http://ip-api.com/json'
         response = urlopen(url)
@@ -267,28 +267,39 @@ def render_anomaly_map() -> None:
         curr_lat, curr_lon = 51.5074, -0.1278
 
     threats = get_active_threats_data()
+    # Create arcs for movement
+    threats['target_lat'] = curr_lat
+    threats['target_lon'] = curr_lon
     
-    # 2. Define Pydeck layers
-    layer = pdk.Layer(
+    scatterplot = pdk.Layer(
         "ScatterplotLayer",
         threats,
         get_position=["lon", "lat"],
         get_color="[0, 255, 0, 160]",
-        get_radius=100000,
+        get_radius=150000,
         pickable=True
     )
+
+    arclayer = pdk.Layer(
+        "ArcLayer",
+        threats,
+        get_source_position=["lon", "lat"],
+        get_target_position=["target_lon", "target_lat"],
+        get_source_color=[0, 255, 0, 80],
+        get_target_color=[0, 255, 0, 255],
+        get_width=3,
+        animation_speed=2,
+    )
     
-    # 3. Create the deck
-    # Note: Satellite view with labels provides the "Google Maps" look with trees/roads
     view_state = pdk.ViewState(
         latitude=curr_lat,
         longitude=curr_lon,
-        zoom=3,
+        zoom=2,
         pitch=45,
     )
     
     r = pdk.Deck(
-        layers=[layer],
+        layers=[arclayer, scatterplot],
         initial_view_state=view_state,
         map_style="mapbox://styles/mapbox/satellite-streets-v11",
         tooltip={"text": "Anomaly: {Vector}\nSource: {Source}"}
@@ -298,8 +309,37 @@ def render_anomaly_map() -> None:
 
 
 def render_ai_analyst() -> None:
-    ai_html = '<div class="ai-analyst-box"><div style="color:#00FF00;font-weight:bold;font-size:0.9rem;margin-bottom:10px;">🤖 AI CHARLIE SOC ANALYST</div><div class="ai-content-wrapper" style="display:flex;gap:30px;flex-wrap:wrap;"><div style="flex:1;min-width:280px;"><p style="color:#FFFFFF;font-size:0.85rem;line-height:1.6;">"Behavioral anomaly detected from Kubernetes worker node 3. Cross-referencing with network logs indicates potential data staging in unauthorized S3 bucket."</p></div><div class="risk-score-box" style="width:200px;border-left:1px solid #1A1A1A;padding-left:20px;"><div style="color:#FFFFFF;font-size:0.65rem;">RISK SCORE</div><div style="color:#00FF00;font-size:1.5rem;font-weight:bold;">82/100</div><div style="margin-top:10px;color:#FFFFFF;font-size:0.7rem;font-weight:bold;">RECOMMENDATION:<br><span style="color:#FFFFFF;font-weight:normal;">Isolate Node 3 & Block egress to bucket audit-exfil-demo.</span></div></div></div></div>'
-    st.markdown(ai_html, unsafe_allow_html=True)
+    # Pull latest threat for interaction
+    threat_data = st.session_state.get('threat_log', [])
+    if not threat_data: return
+    
+    latest = threat_data[0]
+    
+    st.markdown(f"""
+    <div class="ai-analyst-box">
+        <div style="color:#00FF00;font-weight:bold;font-size:0.9rem;margin-bottom:15px;">🤖 AI CHARLIE // SOC MENTOR ACTIVE</div>
+        <div class="ai-content-wrapper" style="display:flex;gap:30px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:280px;">
+                <p style="color:#FFFFFF;font-size:0.9rem;font-weight:bold;margin-bottom:5px;">ALERT: {latest['Vector']}</p>
+                <p style="color:#AAAAAA;font-size:0.85rem;line-height:1.6;">"{latest['Insight']}"</p>
+            </div>
+            <div class="risk-score-box" style="width:220px;border-left:1px solid #1A1A1A;padding-left:20px;">
+                <div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">INCIDENT RISK</div>
+                <div style="color:#00FF00;font-size:1.8rem;font-weight:bold;">{random.randint(75, 99)}/100</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Interactive Response Layer for Students
+    st.markdown("<p style='color: #00FF00; font-size: 0.75rem; margin-top: 15px;'>// HUMAN ANALYST PLAYBOOK SELECTION</p>", unsafe_allow_html=True)
+    cols = st.columns(len(latest['Playbook']))
+    for i, action in enumerate(latest['Playbook']):
+        if cols[i].button(action, use_container_width=True, key=f"btn_{latest['ID']}_{i}"):
+            st.toast(f"Student Action Confirmed: {action}", icon="✅")
+            # Success logic: Clear the latest threat from log to simulate remediation
+            st.session_state.threat_log.pop(0)
+            st.rerun()
 
 
 def render_pipeline_status() -> None:
