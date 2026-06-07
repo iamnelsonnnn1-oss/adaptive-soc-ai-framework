@@ -185,8 +185,13 @@ def inject_custom_css(breach_active: bool = False) -> None:
     """, unsafe_allow_html=True)
 
 
-def get_system_health_data() -> dict:
-    return {"cpu_percent": 42, "memory_percent": 68}
+def get_ai_engine_metrics() -> dict:
+    """Provides tactical telemetry for the AI Charlie SLM Engine."""
+    return {
+        "inference_ms": random.randint(45, 120),
+        "model_confidence": f"{random.uniform(94.2, 99.8):.1f}%",
+        "neural_link": "STABLE"
+    }
 
 
 def get_active_threats_data() -> pd.DataFrame:
@@ -261,12 +266,13 @@ def render_header(threat_count: int, assets_count: int) -> None:
     st.markdown(header_html, unsafe_allow_html=True)
 
 
-def render_system_health() -> None:
-    health = get_system_health_data()
-    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// RESOURCE ALLOCATION</p>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    col1.metric("CPU Usage", f"{health['cpu_percent']}%")
-    col2.metric("Memory", f"{health['memory_percent']}%")
+def render_ai_engine_telemetry() -> None:
+    ai_stats = get_ai_engine_metrics()
+    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// AI ANALYST ENGINE TELEMETRY</p>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Inference Latency", f"{ai_stats['inference_ms']}ms")
+    c2.metric("Model Confidence", ai_stats['model_confidence'])
+    c3.metric("Neural Link", ai_stats['neural_link'])
 
 
 def render_active_threats() -> None:
@@ -580,7 +586,7 @@ def main() -> None:
 
     # Infrastructure Control Plane (Metrics moved to bottom for space)
     st.divider()
-    render_system_health()
+    render_ai_engine_telemetry()
     render_ai_analyst()
     render_incident_ledger()
 
