@@ -341,26 +341,29 @@ def render_ai_analyst() -> None:
         > SCORE: {st.session_state.points} XP<br>
         -------------------------<br>
         > 🤖 AI CHARLIE ANALYST: Commander, we have a breach! {latest.get('Vector', 'Unknown')} detected.<br><br>
-        > LOG: "{latest.get('Insight', 'Metadata unavailable for this vector.')}"{intel_guidance}<br>
-        > ADVISORY: Which playbook protocol should we initiate? 
+        > LOG: "{latest.get('Insight', 'Metadata unavailable for this vector.')}"{intel_guidance}{hint_text}{error_text}<br><br>
+        > ADVISORY: Which playbook protocol should we initiate?
     </div>
     """, unsafe_allow_html=True)
 
-    if st.sidebar.button("HELP: REQUEST FIELD INTEL", key="intel_btn"):
-        st.session_state.show_intel = not st.session_state.show_intel
-        st.rerun()
+    col_h1, col_h2 = st.sidebar.columns(2)
+    if col_h1.button("📡 INTEL", key="intel_btn", use_container_width=True):
+        st.session_state.show_intel = not st.session_state.show_intel; st.rerun()
+    if col_h2.button("💡 HINT", key="hint_btn", use_container_width=True):
+        st.session_state.show_hint = not st.session_state.show_hint; st.rerun()
 
     for action in latest.get('Playbook', []):
         if st.sidebar.button(f"EXECUTE: {action}", key=f"play_{latest['ID']}_{action}"):
             if action == latest.get('Correct'):
                 st.balloons()
-                st.session_state.points += 10
-                st.session_state.threat_log.pop(0)
-                st.session_state.show_intel = False # Reset for next threat
-                st.sidebar.success("TACTICAL SUCCESS! XP GAINED.")
+                st.session_state.points += 10; st.session_state.threat_log.pop(0)
+                st.session_state.show_intel = False; st.session_state.show_hint = False; st.session_state.last_error = ""
+                steps_fmt = "\\n".join(latest.get('Steps', []))
+                st.sidebar.success(f"CORRECT. OPERATION COMPLETE.\\n\\nFIELD STEPS:\\n{steps_fmt}")
                 st.rerun()
             else:
-                st.sidebar.error("MISSION FAILED: WRONG PROTOCOL. TRY AGAIN.")
+                st.session_state.last_error = latest.get('DistractorExplanations', {}).get(action, "Incorrect protocol selection.")
+                st.rerun()
 
 
 def render_pipeline_status() -> None:
@@ -373,9 +376,11 @@ def render_pipeline_status() -> None:
 
 def main() -> None:
     if 'threat_log' not in st.session_state:
-        get_active_threats_data()
+        st.session_state.threat_log = []
     if 'threat_count' not in st.session_state:
-        st.session_state.threat_count = 17
+        st.session_state.threat_count = 0
+    if 'assets_count' not in st.session_state:
+        st.session_state.assets_count = 0
 
     with st.sidebar:
         render_ai_analyst()
@@ -389,6 +394,7 @@ def main() -> None:
             # Prepend to keep latest on top
             st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
             st.session_state.threat_count += 1
+            st.session_state.assets_count += random.randint(1, 5)
             st.rerun()
 
     # TACTICAL ENGINE
@@ -397,11 +403,11 @@ def main() -> None:
     active_breach_mode = breach_sim or (latest_critical is not None)
 
     inject_custom_css(breach_active=active_breach_mode)
-    render_header(st.session_state.threat_count)
+    render_header(st.session_state.threat_count, st.session_state.assets_count)
     
     map_lat, map_lon = None, None
-    if active_breach_mode and latest_critical:
-        map_lat, map_lon = latest_critical['lat'], latest_critical['lon']
+    if threat_list:
+        map_lat, map_lon = threat_list[0]['lat'], threat_list[0]['lon']
 
     # Main Command Deck
     col_left, col_center, col_right = st.columns([1.2, 4, 1.2])
