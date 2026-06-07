@@ -7,6 +7,7 @@ import pydeck as pdk
 import json
 from urllib.request import urlopen
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import time
 import google.generativeai as genai
 
@@ -576,7 +577,7 @@ def main() -> None:
                 
                 new_threat = candidates.sample(1).to_dict('records')[0].copy()
                 new_threat["ID"] = f"TR-AUTO-{random.randint(1000, 9999)}"
-                new_threat["Time"] = datetime.now().strftime("%H:%M:%S")
+                new_threat["Time"] = datetime.now(ZoneInfo("Europe/Berlin")).strftime("%H:%M:%S")
                 st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
                 st.session_state.threat_count += 1
                 st.session_state.assets_count += random.randint(10, 100)
@@ -590,7 +591,7 @@ def main() -> None:
         if st.button("INJECT DETECTION EVENT"):
             new_threat = random.choice(get_active_threats_data().to_dict('records')).copy()
             new_threat["ID"] = f"TR-{random.randint(2000, 9999)}"
-            new_threat["Time"] = datetime.now().strftime("%H:%M:%S")
+            new_threat["Time"] = datetime.now(ZoneInfo("Europe/Berlin")).strftime("%H:%M:%S")
             # Prepend to keep latest on top
             st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
             st.session_state.threat_count += 1
