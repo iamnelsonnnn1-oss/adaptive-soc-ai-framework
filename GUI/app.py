@@ -12,7 +12,6 @@ import time
 import google.generativeai as genai
 
 
-# Resolve logo path for brand consistency across UI and browser favicon
 logo_path = os.path.join(os.path.dirname(__file__), "securex.png")
 if not os.path.exists(logo_path):
     logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
@@ -31,7 +30,6 @@ def inject_custom_css(breach_active: bool = False) -> None:
     spin_speed = "5s" if breach_active else "20s"
     st.markdown("""
         <style>
-        /* Sovereign Canvas Reset & Corporate Depth */
         .stApp {
             background: 
                 radial-gradient(circle at 50% 50%, #0a1118 0%, #000000 100%) !important;
@@ -47,7 +45,6 @@ def inject_custom_css(breach_active: bool = False) -> None:
             color: #FFFFFF !important;
             font-family: 'Courier New', monospace !important;
         }
-        /* Splunk/Chronicle Tactical Terminal */
         .analyst-terminal {
             background: rgba(0, 10, 0, 0.95);
             border: 1px solid #00FF00;
@@ -71,12 +68,10 @@ def inject_custom_css(breach_active: bool = False) -> None:
             z-index: 0;
         }
         
-        /* Tactical Font Injectors */
         h1, h2, h3, p, span, div {
             font-family: 'Courier New', monospace !important;
         }
         
-        /* Glow Heartbeat Indicator */
         @keyframes pulse-green {
             0% { transform: scale(0.98); opacity: 0.5; box-shadow: 0 0 4px #00FF00; }
             50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 14px #00FF00; }
@@ -92,7 +87,6 @@ def inject_custom_css(breach_active: bool = False) -> None:
             animation: pulse-green 1.8s infinite ease-in-out;
         }
 
-        /* Kinetic Globe Projection Control */
         .globe-texture { 
             animation: globe-spin """ + spin_speed + """ linear infinite !important; 
             opacity: 0.4; 
@@ -101,7 +95,6 @@ def inject_custom_css(breach_active: bool = False) -> None:
             0% { transform: translateX(0); } 100% { transform: translateX(-400px); } 
         }
 
-        /* Global Anomaly Map Animations */
         @keyframes map-pulse {
             0% { r: 4; opacity: 1; }
             100% { r: 12; opacity: 0; }
@@ -121,17 +114,14 @@ def inject_custom_css(breach_active: bool = False) -> None:
             opacity: 0.3;
         }
 
-        /* AI Analyst Box */
         .ai-analyst-box {
             background: rgba(10, 15, 24, 0.8);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(0, 255, 0, 0.1);
             border-left: 4px solid #00FF00;
             padding: 15px;
-            margin-top: 20px; /* Ensure sufficient spacing from other elements */
         }
 
-        /* Research Buttons */
         .research-btn {
             display: inline-block;
             padding: 5px 10px;
@@ -143,7 +133,6 @@ def inject_custom_css(breach_active: bool = False) -> None:
             margin-right: 5px;
         }
         
-        /* High-Density Command Metric Containers */
         .pipeline-card {
             background: rgba(5, 5, 5, 0.6);
             backdrop-filter: blur(5px);
@@ -167,7 +156,6 @@ def inject_custom_css(breach_active: bool = False) -> None:
             font-size: 0.75rem;
         }
         
-        /* Tactical Metric Overrides */
         div[data-testid="stMetric"], div.stMetric {
             background-color: rgba(0, 0, 0, 0.4) !important;
             border: 1px solid rgba(0, 255, 0, 0.05) !important;
@@ -184,7 +172,6 @@ def inject_custom_css(breach_active: bool = False) -> None:
             letter-spacing: 1px !important;
             text-transform: uppercase !important;
         }
-        /* Mobile-First Responsive Overrides */
         @media (max-width: 768px) {
             .header-container { flex-direction: column !important; align-items: center !important; text-align: center !important; gap: 25px !important; width: 100% !important; }
             .logo-img { margin-right: 0 !important; margin-bottom: 15px !important; height: 90px !important; max-width: 100% !important; }
@@ -195,7 +182,6 @@ def inject_custom_css(breach_active: bool = False) -> None:
             .stMetric { width: 100% !important; }
             .map-container { height: 400px !important; }
         }
-        /* Breach Simulation Overlay */
         """ + alert_style + """
         """ + ai_breach_style + """
         """ + map_flash + """
@@ -213,7 +199,6 @@ def get_ai_engine_metrics() -> dict:
 
 
 def get_active_threats_data() -> pd.DataFrame:
-    # Protocol: Check for local telemetry file ingestion
     telemetry_path = os.path.join(os.path.dirname(__file__), "telemetry.json")
     local_data = []
     if os.path.exists(telemetry_path):
@@ -265,9 +250,6 @@ def get_active_threats_data() -> pd.DataFrame:
             "Insight": "Information disclosure vulnerability allowing session hijacking without credentials."
         }
     ]
-    
-    if 'threat_log' not in st.session_state:
-        st.session_state.threat_log = []
     return pd.DataFrame(local_data + threat_pool)
 
 
@@ -316,12 +298,12 @@ def render_active_threats() -> None:
     for _, row in threats.iterrows():
         severity_color = {"Critical": "#00FF00", "High": "#FFFFFF", "Medium": "#777777", "Low": "#444444"}.get(row["Severity"], "#222222")
 
-        # Tactical Intel Resolver: Prevents 404s and Parameter errors by checking ID formats
-        mitre_raw = row.get("MITRE", "")
-        cve_raw = row.get("CVE", "")
+        # Sanitization: Pre-flight check for external intelligence hyperlinks
+        mitre_id = str(row.get("MITRE", ""))
+        cve_id = str(row.get("CVE", ""))
         
-        mitre_link = f'<a href="https://attack.mitre.org/techniques/{mitre_raw}/" target="_blank" style="color:#00FF00;text-decoration:none;">{mitre_raw}</a>' if "T" in str(mitre_raw) else str(mitre_raw)
-        cve_link = f'<a href="https://nvd.nist.gov/vuln/detail/{cve_raw}" target="_blank" style="color:#00FF00;text-decoration:none;">{cve_raw}</a>' if "CVE" in str(cve_raw).upper() else str(cve_raw)
+        mitre_link = f'<a href="https://attack.mitre.org/techniques/{mitre_id}/" target="_blank" style="color:#00FF00;text-decoration:none;">{mitre_id}</a>' if "T" in mitre_id else mitre_id
+        cve_link = f'<a href="https://nvd.nist.gov/vuln/detail/{cve_id}" target="_blank" style="color:#00FF00;text-decoration:none;">{cve_id}</a>' if "CVE" in cve_id.upper() else cve_id
 
         threat_html = f'<div style="margin-bottom:12px;border-left:2px solid {severity_color};padding-left:10px;"><div style="font-size:0.75rem;color:#FFFFFF;">[{row["Time"]}] <span style="color:{severity_color};">{row["Source"]}</span></div><div style="font-size:0.8rem;color:#FFFFFF;font-weight:bold;">{row["Vector"]}</div><div style="font-size:0.7rem;color:#00FF00;margin-top:2px;font-family:\'Courier New\',monospace;">{mitre_link} | {cve_link}</div></div>'
         st.markdown(threat_html, unsafe_allow_html=True)
@@ -332,25 +314,20 @@ def render_active_threats() -> None:
 
 
 def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
-    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// LIVE GEOSPATIAL TELEMETRY [ SATELLITE MODE ]</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// GEOSPATIAL TELEMETRY</p>", unsafe_allow_html=True)
 
-    # Determine "Home" location
     try:
-        url = 'http://ip-api.com/json'
-        response = urlopen(url)
+        response = urlopen('http://ip-api.com/json')
         data = json.load(response)
         curr_lat, curr_lon = data['lat'], data['lon']
     except:
-        curr_lat, curr_lon = 51.5074, -0.1278 # Falls back to London
+        curr_lat, curr_lon = 51.5074, -0.1278
 
     threats = pd.DataFrame(st.session_state.get('threat_log', []))
     
-    # Determine View State based on attack
     view_lat = zoom_lat if zoom_lat else curr_lat
     view_lon = zoom_lon if zoom_lon else curr_lon
     zoom_level = 10 if zoom_lat else 2
-
-    # Create arcs for movement
     if not threats.empty:
         threats['target_lat'] = curr_lat
         threats['target_lon'] = curr_lon
@@ -407,18 +384,16 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
 @st.dialog("TACTICAL REMEDIATION INTERFACE")
 def remediation_dialog(latest):
     """Drill-down window for incident analysis and playbook execution."""
-    # Initialize Triage MCQ State
     if 'triage_passed' not in st.session_state:
         st.session_state.triage_passed = False
 
     st.markdown(f"### 🛡️ TRIAGE: {latest.get('Vector')}")
     
-    # External Research Tools
-    c1, c2 = st.columns(2)
+    col1, col2 = st.columns(2)
     vt_link = f"https://www.virustotal.com/gui/search/{latest.get('CVE', latest.get('Vector'))}"
     abuse_link = f"https://www.abuseipdb.com/check/{latest.get('Source')}"
-    c1.markdown(f'<a href="{vt_link}" target="_blank" class="research-btn">🔍 VirusTotal Search</a>', unsafe_allow_html=True)
-    c2.markdown(f'<a href="{abuse_link}" target="_blank" class="research-btn">🛡️ AbuseIPDB Check</a>', unsafe_allow_html=True)
+    col1.markdown(f'<a href="{vt_link}" target="_blank" class="research-btn">🔍 VirusTotal Search</a>', unsafe_allow_html=True)
+    col2.markdown(f'<a href="{abuse_link}" target="_blank" class="research-btn">🛡️ AbuseIPDB Check</a>', unsafe_allow_html=True)
     st.write("")
 
     if not st.session_state.triage_passed:
@@ -514,11 +489,6 @@ def render_case_profile(case_data):
         if len(user_report) < 20:
             st.warning("Report too brief. Please provide more tactical detail for Mastery XP.")
         else:
-            with st.spinner("AI Charlie is reviewing your documentation..."):
-                context = f"Incident: {case_data.get('Vector')}. Student Report: {user_report}"
-                feedback = ask_ai_charlie("Review this incident report. Did they cover containment and remediation? Give personalized feedback.", context)
-                st.session_state.ai_report_feedback = feedback
-
     if 'ai_report_feedback' in st.session_state:
         st.markdown(f"""<div style='background:rgba(0,255,0,0.05); padding:20px; border-left:4px solid #00FF00; margin-top:20px;'>
             <b style='color:#00FF00;'>🤖 AI CHARLIE'S EVALUATION:</b><br><br>{st.session_state.ai_report_feedback}</div>""", unsafe_allow_html=True)
@@ -535,7 +505,7 @@ def render_case_profile(case_data):
 
 def ask_ai_charlie(query, threat_context=None):
     try:
-        # Neural Link Key Resolution
+        # Priority: Stored session key > Streamlit secrets
         api_key = st.session_state.get('gemini_api_key')
         if not api_key:
             api_key = st.secrets.get("GEMINI_API_KEY")
@@ -571,12 +541,12 @@ def render_user_profile() -> None:
                 st.rerun()
         return
 
-    prof = st.session_state.user_profile
+    profile = st.session_state.user_profile
     st.sidebar.markdown(f"""
         <div style="border: 1px solid #00FF00; padding: 10px; background: rgba(0,255,0,0.05); margin-bottom: 20px;">
-            <b style="color:#00FF00;">OFFICER: {prof['username'].upper()}</b><br>
-            <span style="font-size:0.7rem;">TRACK: {prof['track']}</span><br>
-            <span style="font-size:0.7rem;">ENLISTED: {prof['started_at']}</span>
+            <b style="color:#00FF00;">OFFICER: {profile['username'].upper()}</b><br>
+            <span style="font-size:0.7rem;">TRACK: {profile['track']}</span><br>
+            <span style="font-size:0.7rem;">ENLISTED: {profile['started_at']}</span>
         </div>
     """, unsafe_allow_html=True)
 
@@ -606,15 +576,13 @@ def render_ai_analyst() -> None:
         cve_link = f"<a href='https://nvd.nist.gov/vuln/detail/{cve_id}' target='_blank' style='color:#00FF00;'>NIST: {cve_id}</a>" if "CVE" in cve_id else cve_id
         intel_text = f"<br><br>> AI CHARLIE: Accessing intel...<br>> - {mitre_link}<br>> - {cve_link}"
     
-    # Manage chat window inside terminal
     chat_display = ""
-    for chat in st.session_state.chat_history[-2:]: # Show last 2 exchanges
+    for chat in st.session_state.chat_history[-2:]:
         chat_display += f"<br>> 👤 Student: {chat['user']}<br>> 🤖 Charlie: {chat['ai']}<br>"
 
     hint_text = f"<br><br>> [HINT]: {latest.get('Hint')}" if st.session_state.show_hint else ""
     error_text = f"<br><br><span style='color:#FF4B4B;'>[ERROR]: {st.session_state.last_error}</span>" if st.session_state.last_error else ""
 
-    # Neural Link Status
     api_key = st.session_state.get('gemini_api_key') or st.secrets.get("GEMINI_API_KEY")
     link_status = "<span style='color:#00FF00;'>ONLINE</span>" if api_key else "<span style='color:#FF4B4B;'>OFFLINE (MISSING KEY)</span>"
 
@@ -631,7 +599,6 @@ def render_ai_analyst() -> None:
     </div>
     """, unsafe_allow_html=True)
 
-    # Neural Link Persistence Logic
     if not st.session_state.gemini_api_key:
         st.session_state.gemini_api_key = st.sidebar.text_input(
             "🔗 Neural Link (Gemini API Key):", 
@@ -644,14 +611,14 @@ def render_ai_analyst() -> None:
         if query:
             ai_resp = ask_ai_charlie(query, latest.get('Vector') if latest else None)
             st.session_state.chat_history.append({"user": query, "ai": ai_resp})
-            st.session_state.ai_chat_input = "" # Clear the input
+            st.session_state.ai_chat_input = ""
 
     st.sidebar.text_input("Neural Link Command:", key="ai_chat_input", on_change=handle_chat, placeholder="Ask Charlie for triage help...")
 
-    c1, c2 = st.sidebar.columns(2)
-    if c1.button("📡 INTEL", key="intel_btn", use_container_width=True):
+    col1, col2 = st.sidebar.columns(2)
+    if col1.button("📡 INTEL", key="intel_btn", use_container_width=True):
         st.session_state.show_intel = not st.session_state.show_intel; st.rerun()
-    if c2.button("💡 HINT", key="hint_btn", use_container_width=True):
+    if col2.button("💡 HINT", key="hint_btn", use_container_width=True):
         st.session_state.show_hint = not st.session_state.show_hint; st.rerun()
 
     for action in latest.get('Playbook', []):
@@ -661,11 +628,10 @@ def render_ai_analyst() -> None:
                 st.session_state.points += 10
                 st.session_state.threat_log.pop(0)
                 st.session_state.show_intel = False; st.session_state.show_hint = False; st.session_state.last_error = ""
-                st.session_state.threat_count += 0 # Keep total count but refresh display
-                st.session_state.assets_count += random.randint(1, 10) # Discovery XP
+                st.session_state.assets_count += random.randint(1, 10)
                 s_list = latest.get('Steps', [])
-                # Handle Pandas NaN conversion to float
-                steps = "\n".join(s_list) if isinstance(s_list, list) else "Steps not documented for this vector."
+                
+                steps = "\n".join(s_list) if isinstance(s_list, list) else "Protocol details unavailable."
                 st.sidebar.success(f"CORRECT.\n\nFIELD STEPS:\n{steps}")
                 st.rerun()
             else:
@@ -674,7 +640,7 @@ def render_ai_analyst() -> None:
 
 
 def render_incident_ledger() -> None:
-    st.markdown("<p style='color: #FFFFFF; margin: 40px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// MASTER INCIDENT LEDGER [ INTERACTIVE ]</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #FFFFFF; margin: 40px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// MASTER INCIDENT LEDGER</p>", unsafe_allow_html=True)
     threat_list = st.session_state.get('threat_log', [])
     
     st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 20px 0;'>", unsafe_allow_html=True)
@@ -683,26 +649,25 @@ def render_incident_ledger() -> None:
         st.markdown("<p style='color: #444444; font-size: 0.8rem; font-family: monospace;'>[SYSTEM MESSAGE]: LEDGER EMPTY. NO CURRENT INCIDENTS RECORDED.</p>", unsafe_allow_html=True)
         return
 
-    # Create header
-    h_cols = st.columns([1, 1, 1, 3, 1, 1])
+    header_cols = st.columns([1, 1, 1, 3, 1, 1])
     cols_meta = ["TIMESTAMP", "SEVERITY", "ID", "VECTOR", "MITRE", "ACTION"]
-    for col, label in zip(h_cols, cols_meta):
+    for col, label in zip(header_cols, cols_meta):
         col.markdown(f"<span style='color: #00FF00; font-size: 0.7rem; font-weight: bold;'>{label}</span>", unsafe_allow_html=True)
 
     st.markdown("<hr style='border: 0; border-top: 1px solid rgba(0,255,0,0.2); margin: 5px 0 15px 0;'>", unsafe_allow_html=True)
 
     for t in threat_list:
-        r_cols = st.columns([1, 1, 1, 3, 1, 1])
+        row_cols = st.columns([1, 1, 1, 3, 1, 1])
         sev = t.get("Severity", "Low").upper()
         color = "#00FF00" if sev == "CRITICAL" else "#FFFFFF" if sev == "HIGH" else "#777777"
         
-        r_cols[0].markdown(f"<span style='color: #777777; font-size: 0.75rem; font-family: monospace;'>{t.get('Time')}</span>", unsafe_allow_html=True)
-        r_cols[1].markdown(f"<span style='color: {color}; font-size: 0.75rem; font-weight: bold; font-family: monospace;'>{sev}</span>", unsafe_allow_html=True)
-        r_cols[2].markdown(f"<span style='color: #FFFFFF; font-size: 0.75rem; font-family: monospace;'>{t.get('ID')}</span>", unsafe_allow_html=True)
-        r_cols[3].markdown(f"<span style='color: #FFFFFF; font-size: 0.75rem; font-family: monospace;'>{t.get('Vector')}</span>", unsafe_allow_html=True)
-        r_cols[4].markdown(f"<span style='color: #777777; font-size: 0.75rem; font-family: monospace;'>{t.get('MITRE')}</span>", unsafe_allow_html=True)
+        row_cols[0].markdown(f"<span style='color: #777777; font-size: 0.75rem; font-family: monospace;'>{t.get('Time')}</span>", unsafe_allow_html=True)
+        row_cols[1].markdown(f"<span style='color: {color}; font-size: 0.75rem; font-weight: bold; font-family: monospace;'>{sev}</span>", unsafe_allow_html=True)
+        row_cols[2].markdown(f"<span style='color: #FFFFFF; font-size: 0.75rem; font-family: monospace;'>{t.get('ID')}</span>", unsafe_allow_html=True)
+        row_cols[3].markdown(f"<span style='color: #FFFFFF; font-size: 0.75rem; font-family: monospace;'>{t.get('Vector')}</span>", unsafe_allow_html=True)
+        row_cols[4].markdown(f"<span style='color: #777777; font-size: 0.75rem; font-family: monospace;'>{t.get('MITRE')}</span>", unsafe_allow_html=True)
         
-        if r_cols[5].button("OPEN", key=f"ledger_btn_{t.get('ID')}", use_container_width=True):
+        if row_cols[5].button("OPEN", key=f"ledger_btn_{t.get('ID')}", use_container_width=True):
             st.session_state.remediation_target = t
             st.rerun()
 
