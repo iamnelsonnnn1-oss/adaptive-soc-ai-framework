@@ -369,6 +369,36 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     st.pydeck_chart(r)
 
 
+@st.dialog("TACTICAL REMEDIATION INTERFACE")
+def remediation_dialog(latest):
+    """Drill-down window for incident analysis and playbook execution."""
+    st.markdown(f"""
+        <div style="background: rgba(0, 20, 0, 0.9); padding: 20px; border: 1px solid #00FF00; font-family: monospace; color: #00FF00;">
+            <b style="font-size: 1.1rem;">> INCIDENT: {latest.get('ID')}</b><br/>
+            > SEVERITY: {latest.get('Severity', 'UNKNOWN').upper()}<br/>
+            > MITRE ID: {latest.get('MITRE')}<br/>
+            > CVE: {latest.get('CVE')}<br/><br/>
+            > AI ADVISORY: {latest.get('Insight', 'Analyzing vector payload...')}
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.write("### Choose Response Playbook:")
+    for action in latest.get('Playbook', []):
+        if st.button(f"INITIATE: {action}", use_container_width=True):
+            if action == latest.get('Correct'):
+                st.session_state.points += 10
+                # Remove remediated threat from log
+                st.session_state.threat_log = [t for t in st.session_state.threat_log if t.get('ID') != latest.get('ID')]
+                st.session_state.show_intel = False
+                st.session_state.last_error = ""
+                st.success("CORRECT. Remediation steps deployed to production.")
+                time.sleep(2)
+                st.rerun()
+            else:
+                st.session_state.last_error = latest.get('DistractorExplanations', {}).get(action, "Incorrect protocol.")
+                st.error(f"MISSION FAILED: {st.session_state.last_error}")
+
+
 def ask_ai_charlie(query, threat_context=None, manual_key=None):
     try:
         # Priority: Manual Input > Streamlit Secrets
@@ -432,18 +462,18 @@ def render_ai_analyst() -> None:
     </div>
     """, unsafe_allow_html=True)
 
-    # Neural Link Status & API Key Override
-    api_key = st.secrets.get("GEMINI_API_KEY")
-    if not api_key:
-        api_key = st.sidebar.text_input("🔗 Neural Link (Gemini API Key):", type="password", help="Get a free key from Google AI Studio")
+    # Neural Link Persistence Logic
+    if not st.session_state.gemini_api_key:
+        st.session_state.gemini_api_key = st.sidebar.text_input(
+            "🔗 Neural Link (Gemini API Key):", 
+            type="password", 
+            help="Get a free key from Google AI Studio"
+        )
 
-    # Student Chat Input with auto-clear logic
-    if "temp_query" not in st.session_state: st.session_state.temp_query = ""
-    
     def handle_chat():
         query = st.session_state.ai_chat_input
-        if query and api_key:
-            ai_resp = ask_ai_charlie(query, latest.get('Vector') if latest else None, manual_key=api_key)
+        if query and st.session_state.gemini_api_key:
+            ai_resp = ask_ai_charlie(query, latest.get('Vector') if latest else None, manual_key=st.session_state.gemini_api_key)
             st.session_state.chat_history.append({"user": query, "ai": ai_resp})
             st.session_state.ai_chat_input = "" # Clear the input
 
