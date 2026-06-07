@@ -14,10 +14,10 @@ import google.generativeai as genai
 
 # --- TACTICAL DATA MODELS ---
 IR_PHASE_CHALLENGES = {
-    1: {"q": "How do we effectively isolate the endpoint without alerting the adversary?", "options": ["Physical Disconnect", "VLAN Quarantine", "Shutdown OS"], "correct": "VLAN Quarantine", "exp": "VLAN quarantine maintains the host's state for forensics while cutting lateral movement paths."},
-    2: {"q": "Which artifact is most volatile and must be secured first?", "options": ["System Logs", "RAM Dump", "Disk Image"], "correct": "RAM Dump", "exp": "Memory is highly volatile. Data like encryption keys and running processes disappear if power is lost."},
-    3: {"q": "Who is the primary point of contact for a confirmed PII breach?", "options": ["Lead Developer", "Privacy/DPO Officer", "Help Desk"], "correct": "Privacy/DPO Officer", "exp": "GDPR/Compliance requires immediate notification to the Data Protection Officer."},
-    4: {"q": "What tool helps determine if this binary has been seen globally?", "options": ["Nmap", "VirusTotal", "Wireshark"], "correct": "VirusTotal", "exp": "VirusTotal aggregates antivirus scans and provides global reputation data for files/hashes."},
+    1: {"q": "What tool helps determine if this binary has been seen globally?", "options": ["Nmap", "VirusTotal", "Wireshark"], "correct": "VirusTotal", "exp": "VirusTotal aggregates antivirus scans and provides global reputation data for files/hashes."},
+    2: {"q": "How do we effectively isolate the endpoint without alerting the adversary?", "options": ["Physical Disconnect", "VLAN Quarantine", "Shutdown OS"], "correct": "VLAN Quarantine", "exp": "VLAN quarantine maintains the host's state for forensics while cutting lateral movement paths."},
+    3: {"q": "Which artifact is most volatile and must be secured first?", "options": ["System Logs", "RAM Dump", "Disk Image"], "correct": "RAM Dump", "exp": "Memory is highly volatile. Data like encryption keys and running processes disappear if power is lost."},
+    4: {"q": "Who is the primary point of contact for a confirmed PII breach?", "options": ["Lead Developer", "Privacy/DPO Officer", "Help Desk"], "correct": "Privacy/DPO Officer", "exp": "GDPR/Compliance requires immediate notification to the Data Protection Officer."},
     5: {"q": "Before applying a vendor patch, what must be completed?", "options": ["Reboot Host", "Sandbox Testing", "Notify Users"], "correct": "Sandbox Testing", "exp": "Testing patches in a sandbox ensures they won't cause system instability in production."},
     6: {"q": "How do we verify the threat hasn't returned after restoration?", "options": ["Continuous Monitoring", "Ask User", "One-time Scan"], "correct": "Continuous Monitoring", "exp": "Real-time EDR/NDR monitoring is required to ensure no persistent backdoors remain active."},
     7: {"q": "What is the primary goal of a Post-Incident Review?", "options": ["Assign Blame", "Improve Controls", "Close Ticket"], "correct": "Improve Controls", "exp": "The objective is to identify process gaps and strengthen the defense posture for future events."}
@@ -322,9 +322,9 @@ def render_ai_engine_telemetry() -> None:
 
 
 def render_active_threats() -> None:
-    threat_list = st.session_state.get('threat_log', [])
+    threat_log = st.session_state.get('threat_log', [])
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
-    if not threat_log:
+    if threat_log is None or len(threat_log) == 0:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>ALL THREATS NEUTRALIZED. SECTOR CLEAR.</p>", unsafe_allow_html=True)
         return
 
