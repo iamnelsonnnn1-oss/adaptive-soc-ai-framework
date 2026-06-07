@@ -12,6 +12,39 @@ import time
 import google.generativeai as genai
 
 
+# --- TACTICAL DATA MODELS ---
+IR_PHASE_CHALLENGES = {
+    1: {"q": "How do we effectively isolate the endpoint without alerting the adversary?", "options": ["Physical Disconnect", "VLAN Quarantine", "Shutdown OS"], "correct": "VLAN Quarantine", "exp": "VLAN quarantine maintains the host's state for forensics while cutting lateral movement paths."},
+    2: {"q": "Which artifact is most volatile and must be secured first?", "options": ["System Logs", "RAM Dump", "Disk Image"], "correct": "RAM Dump", "exp": "Memory is highly volatile. Data like encryption keys and running processes disappear if power is lost."},
+    3: {"q": "Who is the primary point of contact for a confirmed PII breach?", "options": ["Lead Developer", "Privacy/DPO Officer", "Help Desk"], "correct": "Privacy/DPO Officer", "exp": "GDPR/Compliance requires immediate notification to the Data Protection Officer."},
+    4: {"q": "What tool helps determine if this binary has been seen globally?", "options": ["Nmap", "VirusTotal", "Wireshark"], "correct": "VirusTotal", "exp": "VirusTotal aggregates antivirus scans and provides global reputation data for files/hashes."},
+    5: {"q": "Before applying a vendor patch, what must be completed?", "options": ["Reboot Host", "Sandbox Testing", "Notify Users"], "correct": "Sandbox Testing", "exp": "Testing patches in a sandbox ensures they won't cause system instability in production."},
+    6: {"q": "How do we verify the threat hasn't returned after restoration?", "options": ["Continuous Monitoring", "Ask User", "One-time Scan"], "correct": "Continuous Monitoring", "exp": "Real-time EDR/NDR monitoring is required to ensure no persistent backdoors remain active."},
+    7: {"q": "What is the primary goal of a Post-Incident Review?", "options": ["Assign Blame", "Improve Controls", "Close Ticket"], "correct": "Improve Controls", "exp": "The objective is to identify process gaps and strengthen the defense posture for future events."}
+}
+
+GLOBAL_INTEL_FEED = [
+    {"source": "CISA", "title": "AA24-051A: Phishing Campaign targeting US Govt", "severity": "High"},
+    {"source": "BleepingComputer", "title": "New Ransomware-as-a-Service 'X-Force' Emerging", "severity": "Critical"},
+    {"source": "KrebsOnSecurity", "title": "Critical Zero-Day in Common Firewall Firmware", "severity": "Medium"}
+]
+
+
+def perform_system_hygiene() -> None:
+    """Automated garbage collector for platform efficiency and security."""
+    if 'last_hygiene' not in st.session_state:
+        st.session_state.last_hygiene = time.time()
+    
+    # Run hygiene every 10 minutes or on command
+    if time.time() - st.session_state.last_hygiene > 600:
+        st.cache_data.clear()
+        # Prune chat history to prevent memory pressure
+        if len(st.session_state.chat_history) > 20:
+            st.session_state.chat_history = st.session_state.chat_history[-10:]
+        st.session_state.last_hygiene = time.time()
+        st.sidebar.info("System Hygiene: Cache Optimized.")
+
+
 logo_path = os.path.join(os.path.dirname(__file__), "securex.png")
 if not os.path.exists(logo_path):
     logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
@@ -32,7 +65,7 @@ def inject_custom_css(breach_active: bool = False) -> None:
         <style>
         .stApp {
             background: 
-                radial-gradient(circle at 50% 50%, #0a1118 0%, #000000 100%) !important;
+                radial-gradient(circle at 50% 50%, #05080a 0%, #000000 100%) !important;
             background-attachment: fixed !important;
             color: #FFFFFF !important;
         }
@@ -114,13 +147,14 @@ def inject_custom_css(breach_active: bool = False) -> None:
             opacity: 0.3;
         }
 
-        .ai-analyst-box {
-            background: rgba(10, 15, 24, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 255, 0, 0.1);
-            border-left: 4px solid #00FF00;
+        .risk-metric-card {
+            background: #000000;
+            border: 1px solid rgba(0, 255, 0, 0.2);
             padding: 15px;
+            text-align: center;
         }
+        .risk-label { font-size: 0.65rem; color: #777777; letter-spacing: 2px; text-transform: uppercase; }
+        .risk-value { font-size: 1.8rem; font-weight: bold; color: #00FF00; margin-top: 5px; }
 
         .research-btn {
             display: inline-block;
@@ -289,13 +323,12 @@ def render_ai_engine_telemetry() -> None:
 
 def render_active_threats() -> None:
     threat_list = st.session_state.get('threat_log', [])
-    threats = pd.DataFrame(threat_list)
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
-    if threats.empty:
+    if not threat_log:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>ALL THREATS NEUTRALIZED. SECTOR CLEAR.</p>", unsafe_allow_html=True)
         return
 
-    for _, row in threats.iterrows():
+    for row in threat_log:
         severity_color = {"Critical": "#00FF00", "High": "#FFFFFF", "Medium": "#777777", "Low": "#444444"}.get(row["Severity"], "#222222")
 
         # Sanitization: Pre-flight check for external intelligence hyperlinks
@@ -308,8 +341,8 @@ def render_active_threats() -> None:
         threat_html = f'<div style="margin-bottom:12px;border-left:2px solid {severity_color};padding-left:10px;"><div style="font-size:0.75rem;color:#FFFFFF;">[{row["Time"]}] <span style="color:{severity_color};">{row["Source"]}</span></div><div style="font-size:0.8rem;color:#FFFFFF;font-weight:bold;">{row["Vector"]}</div><div style="font-size:0.7rem;color:#00FF00;margin-top:2px;font-family:\'Courier New\',monospace;">{mitre_link} | {cve_link}</div></div>'
         st.markdown(threat_html, unsafe_allow_html=True)
         
-        if st.button(f"ANALYZE: {row['ID']}", key=f"feed_{row['ID']}"):
-            st.session_state.remediation_target = row.to_dict()
+        if st.button(f"ANALYZE: {row['ID']}", key=f"feed_{row['ID']}", use_container_width=True):
+            st.session_state.remediation_target = row
             st.rerun()
 
 
@@ -547,6 +580,19 @@ def render_user_profile() -> None:
                 st.rerun()
         return
 
+    # Progress Tracking Display
+    points = st.session_state.get('points', 0)
+    xp_to_next = 100 - (points % 100)
+    st.sidebar.markdown(f"""
+        <div style='margin-bottom:15px;'>
+            <span style='color:#777777; font-size:0.6rem;'>XP PROGRESS TO NEXT RANK</span>
+            <div style='background:#111; border:1px solid #00FF00; height:8px; width:100%;'>
+                <div style='background:#00FF00; height:100%; width:{points % 100}%;'></div>
+            </div>
+            <span style='color:#00FF00; font-size:0.6rem;'>{points} XP Total | {xp_to_next} XP needed</span>
+        </div>
+    """, unsafe_allow_html=True)
+
     profile = st.session_state.user_profile
     st.sidebar.markdown(f"""
         <div style="border: 1px solid #00FF00; padding: 10px; background: rgba(0,255,0,0.05); margin-bottom: 20px;">
@@ -674,8 +720,38 @@ def render_incident_ledger() -> None:
         row_cols[4].markdown(f"<span style='color: #777777; font-size: 0.75rem; font-family: monospace;'>{t.get('MITRE')}</span>", unsafe_allow_html=True)
         
         if row_cols[5].button("OPEN", key=f"ledger_btn_{t.get('ID')}", use_container_width=True):
-            st.session_state.remediation_target = t
-            st.rerun()
+
+
+def render_risk_dashboard() -> None:
+    """Aggregated risk assessment mirroring Chronicle/Splunk SOC views."""
+    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// COMMAND RISK ASSESSMENT</p>", unsafe_allow_html=True)
+    threat_list = st.session_state.get('threat_log', [])
+    critical_count = len([t for t in threat_list if t.get('Severity') == 'Critical'])
+    
+    # Dynamic Scoring Logic
+    system_risk = min(100, (len(threat_list) * 5) + (critical_count * 20))
+    user_risk = 12 # Mocked baseline
+    entity_risk = critical_count * 15
+    
+    r1, r2, r3 = st.columns(3)
+    with r1:
+        st.markdown(f'<div class="risk-metric-card"><div class="risk-label">System Risk</div><div class="risk-value" style="color:{"#FF4B4B" if system_risk > 50 else "#00FF00"}">{system_risk}</div></div>', unsafe_allow_html=True)
+    with r2:
+        st.markdown(f'<div class="risk-metric-card"><div class="risk-label">User Entity Risk</div><div class="risk-value">{user_risk}</div></div>', unsafe_allow_html=True)
+    with r3:
+        st.markdown(f'<div class="risk-metric-card"><div class="risk-label">Threat Velocity</div><div class="risk-value">{entity_risk}</div></div>', unsafe_allow_html=True)
+
+
+def render_global_intel() -> None:
+    st.markdown("<p style='color: #FFFFFF; margin: 25px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// GLOBAL THREAT INTELLIGENCE</p>", unsafe_allow_html=True)
+    for intel in GLOBAL_INTEL_FEED:
+        color = "#FF4B4B" if intel['severity'] == "Critical" else "#00FF00"
+        st.markdown(f"""
+            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-left: 2px solid {color}; margin-bottom: 5px;">
+                <span style="font-size: 0.6rem; color: {color}; font-weight: bold;">{intel['source']}</span><br>
+                <span style="font-size: 0.75rem; color: #FFFFFF;">{intel['title']}</span>
+            </div>
+        """, unsafe_allow_html=True)
 
 
 def render_pipeline_status() -> None:
@@ -687,7 +763,9 @@ def render_pipeline_status() -> None:
 
 
 def main() -> None:
-    # Sovereign Initialization: Must execute before any UI calls to prevent crashes
+    # Initialize Hygiene Logic
+    perform_system_hygiene()
+
     session_defaults = {
         'threat_log': [],
         'threat_count': 0,
@@ -795,6 +873,8 @@ def main() -> None:
     render_header(st.session_state.threat_count, st.session_state.assets_count)
 
     render_user_profile()
+    render_risk_dashboard()
+    render_global_intel()
 
     # SIEM Intelligence Window Overlay
     if st.session_state.get('show_intel_feed') and threat_list:
