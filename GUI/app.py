@@ -489,6 +489,12 @@ def render_case_profile(case_data):
         if len(user_report) < 20:
             st.warning("Report too brief. Please provide more tactical detail for Mastery XP.")
         else:
+            with st.spinner("AI Charlie is reviewing your documentation..."):
+                context = f"Incident: {case_data.get('Vector')}. Student Report: {user_report}"
+                feedback = ask_ai_charlie("Review this incident report. Did they cover containment and remediation? Give personalized feedback.", context)
+                st.session_state.ai_report_feedback = feedback
+                st.rerun()
+
     if 'ai_report_feedback' in st.session_state:
         st.markdown(f"""<div style='background:rgba(0,255,0,0.05); padding:20px; border-left:4px solid #00FF00; margin-top:20px;'>
             <b style='color:#00FF00;'>🤖 AI CHARLIE'S EVALUATION:</b><br><br>{st.session_state.ai_report_feedback}</div>""", unsafe_allow_html=True)
