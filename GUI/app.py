@@ -341,11 +341,12 @@ def render_ai_engine_telemetry() -> None:
 
 def render_active_threats() -> None:
     """Renders the live telemetry feed with safety checks for undefined variables."""
-    threat_log = st.session_state.get("threat_log", [])
+    # Explicitly retrieve threat_log from session state at start of scope
+    threat_log = st.session_state.get("threat_log", []) or []
     
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
 
-    if not threat_log or threat_log is None:
+    if not threat_log:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>ALL THREATS NEUTRALIZED. SECTOR CLEAR.</p>", unsafe_allow_html=True)
         return
 
@@ -377,7 +378,8 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     except:
         curr_lat, curr_lon = 51.5074, -0.1278
 
-    threat_log = st.session_state.get('threat_log', [])
+    # Ensure local threat_log is defined for map rendering
+    threat_log = st.session_state.get('threat_log', []) or []
     threats_df = pd.DataFrame(threat_log)
     
     view_lat = zoom_lat if zoom_lat else curr_lat
@@ -625,7 +627,8 @@ def render_ai_analyst() -> None:
     points = st.session_state.get('points', 0) + (st.session_state.user_profile['xp'] if st.session_state.user_profile else 0)
     current_rank = ranks[min(points // 20, len(ranks)-1)]
 
-    threat_log = st.session_state.get("threat_log", [])
+    # Ensure local threat_log is defined for AI Analyst view
+    threat_log = st.session_state.get("threat_log", []) or []
     if not threat_log or not isinstance(threat_log[0], dict):
         st.sidebar.markdown('<div class="analyst-terminal">> SYSTEM SECURE.<br>> NO ACTIVE THREATS.</div>', unsafe_allow_html=True)
         return
@@ -705,7 +708,8 @@ def render_ai_analyst() -> None:
 
 def render_incident_ledger() -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 40px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// MASTER INCIDENT LEDGER</p>", unsafe_allow_html=True)
-    threat_log = st.session_state.get("threat_log", [])
+    # Ensure local threat_log is defined for Ledger view
+    threat_log = st.session_state.get("threat_log", []) or []
     
     st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 20px 0;'>", unsafe_allow_html=True)
 
@@ -739,7 +743,8 @@ def render_incident_ledger() -> None:
 def render_risk_dashboard() -> None:
     """Aggregated risk assessment mirroring Chronicle/Splunk SOC views."""
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// COMMAND RISK ASSESSMENT</p>", unsafe_allow_html=True)
-    threat_log = st.session_state.get("threat_log", [])
+    # Ensure local threat_log is defined for Risk calculation
+    threat_log = st.session_state.get("threat_log", []) or []
     critical_count = len([t for t in threat_log if t.get('Severity') == 'Critical'])
     
     # Dynamic Scoring Logic
@@ -881,7 +886,8 @@ def main() -> None:
         st.markdown("<br><br><br><br>", unsafe_allow_html=True)
         st.markdown("<div style='border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;'><p style='color: #555555; font-size: 0.6rem; line-height: 1.2;'>// GDPR COMPLIANCE: THIS SYSTEM PROCESSES TEMPORARY IP DATA FOR GEOSPATIAL PROJECTION. DATA IS VOLATILE AND NOT PERSISTED BEYOND THE ACTIVE SESSION. [ FRAMEWORK VERSION 1.0 ]</p></div>", unsafe_allow_html=True)
 
-    threat_log = st.session_state.get('threat_log', [])
+    # Initialize main scope threat_log
+    threat_log = st.session_state.get('threat_log', []) or []
     latest_critical = next((t for t in threat_log if t.get("Severity") == "Critical"), None)
     active_breach_mode = breach_sim or (latest_critical is not None)
 
@@ -933,4 +939,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Ensure main() is the entry point to guarantee state initialization
     main()
