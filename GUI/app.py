@@ -300,10 +300,20 @@ def render_active_threats() -> None:
     if threats.empty:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>ALL THREATS NEUTRALIZED. SECTOR CLEAR.</p>", unsafe_allow_html=True)
         return
+
     for _, row in threats.iterrows():
         severity_color = {"Critical": "#00FF00", "High": "#FFFFFF", "Medium": "#777777", "Low": "#444444"}.get(row["Severity"], "#222222")
-        threat_html = f'<div style="margin-bottom:12px;border-left:2px solid {severity_color};padding-left:10px;"><div style="font-size:0.75rem;color:#FFFFFF;">[{row["Time"]}] <span style="color:{severity_color};">{row["Source"]}</span></div><div style="font-size:0.8rem;color:#FFFFFF;font-weight:bold;">{row["Vector"]}</div><div style="font-size:0.7rem;color:#00FF00;margin-top:2px;font-family:\'Courier New\',monospace;"><a href="https://attack.mitre.org/techniques/{row.get("MITRE", "")}/" target="_blank" style="color:#00FF00;text-decoration:none;">{row.get("MITRE", "")}</a> | <a href="https://nvd.nist.gov/vuln/detail/{row.get("CVE", "")}" target="_blank" style="color:#00FF00;text-decoration:none;">{row.get("CVE", "")}</a></div></div>'
+
+        # Tactical Intel Resolver: Prevents 404s and Parameter errors by checking ID formats
+        mitre_raw = row.get("MITRE", "")
+        cve_raw = row.get("CVE", "")
+        
+        mitre_link = f'<a href="https://attack.mitre.org/techniques/{mitre_raw}/" target="_blank" style="color:#00FF00;text-decoration:none;">{mitre_raw}</a>' if "T" in str(mitre_raw) else str(mitre_raw)
+        cve_link = f'<a href="https://nvd.nist.gov/vuln/detail/{cve_raw}" target="_blank" style="color:#00FF00;text-decoration:none;">{cve_raw}</a>' if "CVE" in str(cve_raw).upper() else str(cve_raw)
+
+        threat_html = f'<div style="margin-bottom:12px;border-left:2px solid {severity_color};padding-left:10px;"><div style="font-size:0.75rem;color:#FFFFFF;">[{row["Time"]}] <span style="color:{severity_color};">{row["Source"]}</span></div><div style="font-size:0.8rem;color:#FFFFFF;font-weight:bold;">{row["Vector"]}</div><div style="font-size:0.7rem;color:#00FF00;margin-top:2px;font-family:\'Courier New\',monospace;">{mitre_link} | {cve_link}</div></div>'
         st.markdown(threat_html, unsafe_allow_html=True)
+        
         if st.button(f"ANALYZE: {row['ID']}", key=f"feed_{row['ID']}"):
             remediation_dialog(row.to_dict())
 
@@ -363,7 +373,19 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
         layers=[arclayer, scatterplot],
         initial_view_state=view_state,
         map_style="mapbox://styles/mapbox/satellite-streets-v11",
-        tooltip={"text": "Anomaly: {Vector}\nSource: {Source}"}
+        tooltip={
+            "html": """
+                <div style="background: rgba(0, 10, 0, 0.9); border: 1px solid #00FF00; padding: 12px; color: #FFFFFF; font-family: monospace; font-size: 0.8rem;">
+                    <b style="color: #00FF00; font-size: 0.9rem;">[ INCIDENT: {ID} ]</b><br/>
+                    <hr style="border: 0; border-top: 1px solid rgba(0,255,0,0.2); margin: 5px 0;">
+                    <b>VECTOR:</b> {Vector}<br/>
+                    <b>SOURCE:</b> {Source}<br/>
+                    <b>MITRE:</b> {MITRE} | <b>CVE:</b> {CVE}<br/>
+                    <b>STATUS:</b> <span style="color: #00FF00;">{Status}</span>
+                </div>
+            """,
+            "style": {"backgroundColor": "transparent", "color": "white", "padding": "0"}
+        }
     )
     
     st.pydeck_chart(r)
@@ -386,37 +408,58 @@ def remediation_dialog(latest):
     for action in latest.get('Playbook', []):
         if st.button(f"INITIATE: {action}", use_container_width=True):
             if action == latest.get('Correct'):
-                st.session_state.points += 10
-                # Remove remediated threat from log
-                st.session_state.threat_log = [t for t in st.session_state.threat_log if t.get('ID') != latest.get('ID')]
-                st.session_state.show_intel = False
-                st.session_state.last_error = ""
-                st.success("CORRECT. Remediation steps deployed to production.")
-                time.sleep(2)
+                # Remediation Sequence: Award points and transition to case archive
+                st.session_state.active_case = latest.copy()
                 st.rerun()
             else:
                 st.session_state.last_error = latest.get('DistractorExplanations', {}).get(action, "Incorrect protocol.")
                 st.error(f"MISSION FAILED: {st.session_state.last_error}")
 
 
+def render_case_profile(case_data):
+    """Detailed Case View: Triggered when a playbook is executed correctly."""
+    st.markdown(f"""
+        <div style="padding: 20px; border: 2px solid #00FF00; background: rgba(0, 20, 0, 0.95); border-radius: 8px;">
+            <h1 style="color: #00FF00; font-family: monospace; letter-spacing: 3px;">CASE FILE: {case_data.get('ID')}</h1>
+            <p style="color: #FFFFFF; font-size: 1.1rem; border-bottom: 1px solid #1A1A1A; padding-bottom: 10px;"><b>Status:</b> REMEDIATED // ARCHIVING PRE-SAVED PROFILE</p>
+            <div style="display: flex; gap: 40px; margin-top: 30px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 300px;">
+                    <h3 style="color: #00FF00;">INCIDENT DESCRIPTION</h3>
+                    <p style="color: #FFFFFF; font-size: 0.95rem; line-height: 1.6;">{case_data.get('Insight')}</p>
+                    <h3 style="color: #00FF00; margin-top: 20px;">TECHNICAL FIELD STEPS</h3>
+                    <p style="color: #AAAAAA; font-family: monospace;">{" ".join(case_data.get('Steps', [])) if isinstance(case_data.get('Steps'), list) else 'Metadata unavailable.'}</p>
+                </div>
+                <div style="width: 300px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 30px;">
+                    <h4 style="color: #00FF00;">FORENSIC METADATA</h4>
+                    <p style="color: #FFFFFF; font-size: 0.8rem;"><b>VECTOR:</b> {case_data.get('Vector')}</p>
+                    <p style="color: #FFFFFF; font-size: 0.8rem;"><b>CVE:</b> {case_data.get('CVE')}</p>
+                    <p style="color: #FFFFFF; font-size: 0.8rem;"><b>MITRE:</b> {case_data.get('MITRE')}</p>
+                    <p style="color: #FFFFFF; font-size: 0.8rem;"><b>REGION:</b> LAT: {case_data.get('lat')}, LON: {case_data.get('lon')}</p>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.write("")
+    if st.button("← RETURN TO COMMAND CENTER", type="primary"):
+        # Award XP and remove threat upon archive
+        st.session_state.points += 10
+        st.session_state.threat_log = [t for t in st.session_state.threat_log if t.get('ID') != case_data.get('ID')]
+        st.session_state.active_case = None
+        st.rerun()
+
+
 def ask_ai_charlie(query, threat_context=None, manual_key=None):
     try:
-        # Priority: Manual Input > Streamlit Secrets
-        api_key = manual_key if manual_key else st.secrets.get("GEMINI_API_KEY")
-        
-        if not api_key:
-            return "AI Charlie's neural link is offline. (Missing API Key)"
+        api_key = manual_key if manual_key else st.session_state.get('gemini_api_key')
+        if not api_key: return "AI Charlie's neural link is offline. (Missing API Key)"
         
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        context_prompt = f"You are AI Charlie, an expert SOC Analyst mentor. Help the student understand this security event: {threat_context}. " if threat_context else "You are AI Charlie, a SOC mentor."
-        full_prompt = f"{context_prompt} User asks: {query}. Keep it tactical, technical, and educational. Reference MITRE or NIST if applicable."
-        
-        response = model.generate_content(full_prompt)
+        prompt = f"You are AI Charlie, an expert SOC mentor. Incident: {threat_context}. Student asks: {query}. Keep it technical."
+        response = model.generate_content(prompt)
         return response.text
-    except Exception as e:
-        return f"Neural Link Error: {str(e)}"
+    except Exception as e: return f"Neural Link Error: {str(e)}"
 
 
 def render_ai_analyst() -> None:
@@ -438,9 +481,14 @@ def render_ai_analyst() -> None:
         return
 
     latest = threat_list[0]
+    
     intel_text = ""
-    if st.session_state.show_intel:
-        intel_text = f"<br><br>> AI CHARLIE: Accessing high-authority intel channels...<br>> - <a href='https://attack.mitre.org/techniques/{latest.get('MITRE','')}/' target='_blank' style='color:#00FF00;'>MITRE: {latest.get('MITRE','')}</a><br>> - <a href='https://nvd.nist.gov/vuln/detail/{latest.get('CVE','')}' target='_blank' style='color:#00FF00;'>NIST: {latest.get('CVE','')}</a>"
+    if st.session_state.show_intel and latest:
+        mitre_id = latest.get('MITRE','')
+        cve_id = latest.get('CVE','')
+        mitre_link = f"<a href='https://attack.mitre.org/techniques/{mitre_id}/' target='_blank' style='color:#00FF00;'>MITRE: {mitre_id}</a>" if "T" in mitre_id else mitre_id
+        cve_link = f"<a href='https://nvd.nist.gov/vuln/detail/{cve_id}' target='_blank' style='color:#00FF00;'>NIST: {cve_id}</a>" if "CVE" in cve_id else cve_id
+        intel_text = f"<br><br>> AI CHARLIE: Accessing intel...<br>> - {mitre_link}<br>> - {cve_link}"
     
     # Manage chat window inside terminal
     chat_display = ""
@@ -562,12 +610,20 @@ def main() -> None:
         'next_interval': 10,
         'auto_step': 0,
         'breach_sim_active': False,
+        'active_case': None,
         'gemini_api_key': st.secrets.get("GEMINI_API_KEY", "")
     }
     
     for key, val in session_defaults.items():
         if key not in st.session_state:
             st.session_state[key] = val
+
+    # Case Overlay Check: This simulates the 'New Page'
+    if st.session_state.active_case:
+        inject_custom_css(breach_active=False)
+        render_header(st.session_state.threat_count, st.session_state.assets_count)
+        render_case_profile(st.session_state.active_case)
+        st.stop() # Prevents rendering of the rest of the dashboard
 
     with st.sidebar:
         st.markdown("<p style='color: #FFFFFF; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
