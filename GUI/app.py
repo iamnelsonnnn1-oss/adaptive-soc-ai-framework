@@ -372,8 +372,15 @@ def render_pipeline_status() -> None:
 
 
 def main() -> None:
+    # Initialize simulation state (GDPR Compliant: Volatile session telemetry only)
     if 'threat_log' not in st.session_state:
-        get_active_threats_data()
+        st.session_state.threat_log = []
+    if 'threat_count' not in st.session_state:
+        st.session_state.threat_count = 0
+    if 'assets_count' not in st.session_state:
+        st.session_state.assets_count = 0
+    if 'points' not in st.session_state:
+        st.session_state.points = 0
 
     with st.sidebar:
         render_ai_analyst()
@@ -399,8 +406,8 @@ def main() -> None:
     render_header(st.session_state.threat_count, st.session_state.assets_count)
     
     map_lat, map_lon = None, None
-    if threat_list:
-        map_lat, map_lon = threat_list[0]['lat'], threat_list[0]['lon']
+    if active_breach_mode and latest_critical:
+        map_lat, map_lon = latest_critical['lat'], latest_critical['lon']
 
     # Main Command Deck
     col_left, col_center, col_right = st.columns([1.2, 4, 1.2])
