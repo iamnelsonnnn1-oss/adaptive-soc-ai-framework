@@ -151,7 +151,19 @@ def inject_custom_css(breach_active: bool = False) -> None:
             letter-spacing: 1px !important;
             text-transform: uppercase !important;
         }
-        /* Mobile-First Responsive Overrides */
+        /* Chronicle/Splunk Tactical UI Hardening */
+        .analyst-terminal {
+            background: rgba(0, 20, 0, 0.9);
+            border: 1px solid #00FF00;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            color: #00FF00;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 10px #00FF00;
+        }
+        
         @media (max-width: 768px) {
             .header-container { flex-direction: column !important; align-items: center !important; text-align: center !important; gap: 25px !important; width: 100% !important; }
             .logo-img { margin-right: 0 !important; margin-bottom: 15px !important; height: 90px !important; max-width: 100% !important; }
@@ -175,12 +187,12 @@ def get_system_health_data() -> dict:
 
 def get_active_threats_data() -> pd.DataFrame:
     threat_pool = [
-        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Insight": "Polymorphic payload detected. Attackers are obfuscating ${jndi:ldap} strings to bypass EDR filters."},
-        {"ID": "TR-1082", "Severity": "High", "Source": "EDR-Core", "Vector": "PwnKit Escalation", "Status": "Active", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034", "Playbook": ["Remove SUID bit", "Patch Polkit", "Isolate Host"], "Insight": "Metamorphic exploit attempt. The binary signature is cycling every execution to evade signature-based detection."},
-        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Sensor", "Vector": "runc Escape", "Status": "Active", "lat": 52.5200, "lon": 13.4050, "MITRE": "T1611", "CVE": "CVE-2024-21626", "Playbook": ["Update Runc", "ReadOnly RootFS", "Pod Security Policy"], "Insight": "Container escape detected. High-risk lateral movement to K8s control plane observed."},
-        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", "Playbook": ["Disable SFTP", "Rotate DB Keys", "IP Blocklist"], "Insight": "Zero-day SQL injection in file transfer service. Immediate exfiltration detected in data-tier vpc."},
-        {"ID": "TR-1085", "Severity": "High", "Source": "Falcon-X", "Vector": "PaperCut RCE", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1210", "CVE": "CVE-2023-27350", "Playbook": ["Update Server", "Firewall Port 9191", "Kill Java Process"], "Insight": "Remote code execution via setup-mode bypass. Metamorphic shellcode payload detected in runtime memory."},
-        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Active", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966", "Playbook": ["Clear Sessions", "Update NetScaler", "Kill Active VPN"], "Insight": "Information disclosure vulnerability allowing session hijacking without credentials. Active session theft in progress."}
+        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Correct": "Patch Log4j", "Insight": "Polymorphic payload detected. Obfuscated ${jndi:ldap} strings observed."},
+        {"ID": "TR-1082", "Severity": "High", "Source": "EDR-Core", "Vector": "PwnKit Escalation", "Status": "Active", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034", "Playbook": ["Remove SUID bit", "Patch Polkit", "Isolate Host"], "Correct": "Patch Polkit", "Insight": "Metamorphic exploit: binary signature cycling detected in runtime."},
+        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Sensor", "Vector": "runc Escape", "Status": "Active", "lat": 52.5200, "lon": 13.4050, "MITRE": "T1611", "CVE": "CVE-2024-21626", "Playbook": ["Update Runc", "ReadOnly RootFS", "Pod Security Policy"], "Correct": "Update Runc", "Insight": "Container escape via runc descriptor. Possible lateral movement."},
+        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", "Playbook": ["Disable SFTP", "Rotate DB Keys", "IP Blocklist"], "Correct": "IP Blocklist", "Insight": "Zero-day SQL injection in progress. Data exfiltration detected."},
+        {"ID": "TR-1085", "Severity": "High", "Source": "Falcon-X", "Vector": "PaperCut RCE", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1210", "CVE": "CVE-2023-27350", "Playbook": ["Update Server", "Firewall Port 9191", "Kill Java Process"], "Correct": "Update Server", "Insight": "Setup-mode bypass RCE. Metamorphic shellcode in memory."},
+        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Active", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966", "Playbook": ["Clear Sessions", "Update NetScaler", "Kill Active VPN"], "Correct": "Update NetScaler", "Insight": "Session hijacking without credentials. Active token theft."}
     ]
     
     if 'threat_log' not in st.session_state:
@@ -235,7 +247,7 @@ def render_active_threats() -> None:
 def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// LIVE GEOSPATIAL TELEMETRY [ SATELLITE MODE ]</p>", unsafe_allow_html=True)
 
-    # HQ Coordinates
+    # 1. Determine "Home" location
     try:
         url = 'http://ip-api.com/json'
         response = urlopen(url)
@@ -244,34 +256,36 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     except:
         curr_lat, curr_lon = 51.5074, -0.1278
 
-    threats = get_active_threats_data().copy()
+    threats = pd.DataFrame(st.session_state.threat_log).copy()
     threats['target_lat'] = curr_lat
     threats['target_lon'] = curr_lon
 
-    # Dynamic View Logic
+    # 2. Dynamic View Logic
     view_lat = zoom_lat if zoom_lat else curr_lat
     view_lon = zoom_lon if zoom_lon else curr_lon
-    zoom_level = 10 if zoom_lat else 2
+    zoom_level = 8 if zoom_lat else 2
 
-    scatterplot = pdk.Layer(
+    # 3. ARC Layers for movement
+    layers = [
+        pdk.Layer(
+            "ArcLayer",
+            threats,
+            get_source_position=["lon", "lat"],
+            get_target_position=["target_lon", "target_lat"],
+            get_source_color=[0, 255, 0, 120],
+            get_target_color=[0, 255, 0, 255],
+            get_width=5,
+            pickable=True,
+        ),
+        pdk.Layer(
         "ScatterplotLayer",
         threats,
         get_position=["lon", "lat"],
-        get_color="[0, 255, 0, 160]",
+        get_color="[0, 255, 0, 200]",
         get_radius=150000,
         pickable=True
-    )
-
-    arclayer = pdk.Layer(
-        "ArcLayer",
-        threats,
-        get_source_position=["lon", "lat"],
-        get_target_position=["target_lon", "target_lat"],
-        get_source_color=[0, 255, 0, 80],
-        get_target_color=[0, 255, 0, 255],
-        get_width=3,
-        animation_speed=2,
-    )
+        )
+    ]
 
     view_state = pdk.ViewState(
         latitude=view_lat,
@@ -281,45 +295,72 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     )
     
     r = pdk.Deck(
-        layers=[arclayer, scatterplot],
+        layers=layers,
         initial_view_state=view_state,
         map_style="mapbox://styles/mapbox/satellite-streets-v11",
-        tooltip={"text": "Anomaly: {Vector}\nSource: {Source}"}
+        tooltip={"text": "ANOMALY: {Vector}\nCLICK SIDEBAR TO ANALYZE"}
     )
     
     st.pydeck_chart(r)
 
 
 def render_ai_analyst() -> None:
+    # Gamification State
+    if 'points' not in st.session_state: st.session_state.points = 0
+    
+    ranks = ["PRIVATE", "COMMANDER 1", "COMMANDER 2", "COMMANDER 3", "COMMANDER 4", "COMMANDER 5", "COMMANDER 6", "COMMANDER 7", "OFFICERS CLUB"]
+    rank_idx = min(st.session_state.points // 20, len(ranks) - 1)
+    current_rank = ranks[rank_idx]
+
     threat_list = st.session_state.get('threat_log', [])
-    if not threat_list: return
+    if not threat_list:
+        st.sidebar.success("ALL THREATS NEUTRALIZED. SECTOR CLEAR.")
+        return
 
     latest = threat_list[0]
 
-    st.markdown(f"""
-    <div class="ai-analyst-box">
-        <div style="color:#00FF00;font-weight:bold;font-size:0.9rem;margin-bottom:15px;">🤖 AI CHARLIE // SOC CO-PILOT ACTIVE</div>
-        <div class="ai-content-wrapper" style="display:flex;gap:30px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:280px;">
-                <p style="color:#FFFFFF;font-size:0.9rem;font-weight:bold;margin-bottom:5px;">VECTOR: {latest['Vector']}</p>
-                <p style="color:#AAAAAA;font-size:0.85rem;line-height:1.6;">"{latest['Insight']}"</p>
-            </div>
-            <div class="risk-score-box" style="width:220px;border-left:1px solid rgba(0,255,0,0.2);padding-left:20px;">
-                <div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">INCIDENT RISK</div>
-                <div style="color:#00FF00;font-size:2rem;font-weight:bold;">{random.randint(85, 99)}/100</div>
-            </div>
-        </div>
+    # Custom Terminal Chat
+    if 'show_intel' not in st.session_state: st.session_state.show_intel = False
+
+    intel_guidance = ""
+    if st.session_state.show_intel:
+        intel_guidance = f"""
+        <br><br>
+        > 🤖 AI CHARLIE: Intelligence required? Understood.<br>
+        > RECOMMENDED CHANNELS:<br>
+        > - <a href="https://attack.mitre.org/techniques/{latest['MITRE']}/" target="_blank" style="color:#00FF00;">MITRE ATT&CK: {latest['MITRE']}</a><br>
+        > - <a href="https://nvd.nist.gov/vuln/detail/{latest['CVE']}" target="_blank" style="color:#00FF00;">NVD DETAILS: {latest['CVE']}</a><br>
+        > - <a href="https://search.nist.gov/search?query={latest['CVE']}" target="_blank" style="color:#00FF00;">NIST SEARCH</a><br>
+        -------------------------
+        """
+
+    st.sidebar.markdown(f"""
+    <div class="analyst-terminal">
+        > ACCESSING CO-PILOT...<br>
+        > RANK: {current_rank}<br>
+        > SCORE: {st.session_state.points} XP<br>
+        -------------------------<br>
+        > 🤖 AI CHARLIE: Commander, we have a breach! {latest['Vector']} detected.<br><br>
+        > LOG: "{latest['Insight']}"{intel_guidance}<br>
+        > ADVISORY: Which playbook protocol should we initiate? 
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<p style='color: #00FF00; font-size: 0.7rem; margin-top: 15px;'>// STUDENT ACTION: SELECT REMEDIATION PLAYBOOK</p>", unsafe_allow_html=True)
-    playbook_cols = st.columns(len(latest['Playbook']))
-    for i, action in enumerate(latest['Playbook']):
-        if playbook_cols[i].button(action, use_container_width=True, key=f"play_{latest['ID']}_{i}"):
-            st.balloons()
-            st.success(f"SUCCESS: {action} EXECUTED.")
-            st.session_state.threat_log.pop(0)
-            st.rerun()
+    if st.sidebar.button("HELP: REQUEST FIELD INTEL", key="intel_btn"):
+        st.session_state.show_intel = not st.session_state.show_intel
+        st.rerun()
+
+    for action in latest['Playbook']:
+        if st.sidebar.button(f"EXECUTE: {action}", key=f"play_{latest['ID']}_{action}"):
+            if action == latest['Correct']:
+                st.balloons()
+                st.session_state.points += 10
+                st.session_state.threat_log.pop(0)
+                st.session_state.show_intel = False # Reset for next threat
+                st.sidebar.success("TACTICAL SUCCESS! XP GAINED.")
+                st.rerun()
+            else:
+                st.sidebar.error("MISSION FAILED: WRONG PROTOCOL. TRY AGAIN.")
 
 
 def render_pipeline_status() -> None:
@@ -331,8 +372,11 @@ def render_pipeline_status() -> None:
 
 
 def main() -> None:
-    # Command Simulation State
+    if 'threat_log' not in st.session_state:
+        get_active_threats_data()
+
     with st.sidebar:
+        render_ai_analyst()
         st.markdown("<p style='color: #FFFFFF; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
         breach_sim = st.toggle("SIMULATE SYSTEM BREACH", value=False)
         
@@ -344,13 +388,18 @@ def main() -> None:
             st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
             st.rerun()
 
-    # Automatic Breach Trigger Logic
-    critical_threat_active = any(t.get("Severity") == "Critical" for t in st.session_state.get('threat_log', []))
-    active_breach_mode = breach_sim or critical_threat_active
+    # TACTICAL ENGINE
+    threat_list = st.session_state.get('threat_log', [])
+    latest_critical = next((t for t in threat_list if t.get("Severity") == "Critical"), None)
+    active_breach_mode = breach_sim or (latest_critical is not None)
 
     inject_custom_css(breach_active=active_breach_mode)
     render_header()
     
+    map_lat, map_lon = None, None
+    if active_breach_mode and latest_critical:
+        map_lat, map_lon = latest_critical['lat'], latest_critical['lon']
+
     # Main Command Deck
     col_left, col_center, col_right = st.columns([1.2, 4, 1.2])
     
@@ -358,7 +407,7 @@ def main() -> None:
         render_active_threats()
         
     with col_center:
-        render_anomaly_map()
+        render_anomaly_map(zoom_lat=map_lat, zoom_lon=map_lon)
         
     with col_right:
         render_pipeline_status()
@@ -366,7 +415,6 @@ def main() -> None:
     # Infrastructure Control Plane (Metrics moved to bottom for space)
     st.divider()
     render_system_health()
-    render_ai_analyst()
 
 
 if __name__ == "__main__":
