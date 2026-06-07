@@ -387,7 +387,8 @@ def render_ai_analyst() -> None:
                 st.session_state.points += 10
                 st.session_state.threat_log.pop(0)
                 st.session_state.show_intel = False; st.session_state.show_hint = False; st.session_state.last_error = ""
-                steps = "\n".join(latest.get('Steps', []))
+                steps_list = latest.get('Steps', [])
+                steps = "\n".join(steps_list) if isinstance(steps_list, list) else "Steps not documented."
                 st.sidebar.success(f"CORRECT.\n\nFIELD STEPS:\n{steps}")
                 st.rerun()
             else:

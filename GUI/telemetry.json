@@ -11,6 +11,12 @@
     "CVE": "CVE-2023-XXXXX",
     "Playbook": ["Disable Stack Exec", "Patch Kernel", "ASLR Enable"],
     "Correct": "Patch Kernel",
-    "Insight": "Zero-day buffer overflow detected in local sensor driver. Potential for arbitrary code execution."
+    "Insight": "Zero-day buffer overflow detected in local sensor driver. Potential for arbitrary code execution.",
+    "Hint": "A patch is available for the underlying driver module.",
+    "Steps": [
+      "1. Quarantining the affected endpoint",
+      "2. Apply kernel security patch KB-99281",
+      "3. Verify ASLR is enforced globally"
+    ]
   }
 ]
