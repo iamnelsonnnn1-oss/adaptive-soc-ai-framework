@@ -217,15 +217,21 @@ def get_pipeline_status_data() -> pd.DataFrame:
     ])
 
 
+@st.cache_data
+def get_base64_logo(file_path: str) -> str:
+    if os.path.exists(file_path):
+        with open(file_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    return ""
+
+
 def render_header() -> None:
     logo_path = os.path.join(os.path.dirname(__file__), "securex.png")
     if not os.path.exists(logo_path):
         logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
-    logo_html = ""
-    if os.path.exists(logo_path):
-        with open(logo_path, "rb") as f:
-            logo_b64 = base64.b64encode(f.read()).decode()
-            logo_html = f'<img class="logo-img" src="data:image/png;base64,{logo_b64}" style="height:150px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">'
+    
+    logo_b64 = get_base64_logo(logo_path)
+    logo_html = f'<img class="logo-img" src="data:image/png;base64,{logo_b64}" style="height:150px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">' if logo_b64 else ""
     
     header_html = f'<div class="header-container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;width:100%;"><div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:2.2rem;font-weight:900;letter-spacing:4px;color:#00FF00;">SECUREX COMMAND</h1><p style="color:#FFFFFF;margin:5px 0 0 0;font-size:0.85rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div class="header-metrics" style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;justify-content:center;"><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#00FF00;font-weight:bold;font-size:1.2rem;">17</div></div><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">2,491</div></div><div style="background:#000000;border:1px solid #00FF00;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#00FF00;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
     st.markdown(header_html, unsafe_allow_html=True)
@@ -317,6 +323,9 @@ def main() -> None:
             # Prepend to keep latest on top
             st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
             st.rerun()
+
+        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+        st.markdown("<div style='border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;'><p style='color: #555555; font-size: 0.6rem; line-height: 1.2;'>// GDPR COMPLIANCE: THIS SYSTEM PROCESSES TEMPORARY IP DATA FOR GEOSPATIAL PROJECTION. DATA IS VOLATILE AND NOT PERSISTED BEYOND THE ACTIVE SESSION. [ FRAMEWORK VERSION 1.0 ]</p></div>", unsafe_allow_html=True)
 
     # Automatic Breach Trigger Logic
     critical_threat_active = any(t.get("Severity") == "Critical" for t in st.session_state.get('threat_log', []))
