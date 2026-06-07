@@ -46,6 +46,19 @@ def inject_custom_css(breach_active: bool = False) -> None:
             pointer-events: none;
             z-index: 0;
         }
+        @keyframes scan-sweep {
+            0% { transform: translateY(-20vh); }
+            100% { transform: translateY(100vh); }
+        }
+        .stApp::after {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 20vh;
+            background: linear-gradient(to bottom, transparent, rgba(0, 255, 0, 0.025), transparent);
+            pointer-events: none;
+            z-index: 0;
+            animation: scan-sweep 12s linear infinite;
+        }
         
         /* Tactical Font Injectors */
         h1, h2, h3, p, span, div {
