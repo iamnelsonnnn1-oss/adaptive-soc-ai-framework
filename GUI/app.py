@@ -395,7 +395,7 @@ def render_ai_analyst() -> None:
         "THREAT HUNTER (PROFESSIONAL)", 
         "INCIDENT COMMANDER (EXPERT)", 
         "SOC ARCHITECT (MASTER)", 
-        "OFFICERS CLUB (SME)"
+        "ADVANCE CYBER SECURITY PROFESSIONALS"
     ]
     points = st.session_state.get('points', 0)
     current_rank = ranks[min(points // 20, len(ranks)-1)]

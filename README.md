@@ -1,9 +1,11 @@
 # Adaptive SOC AI Framework
 **Version: 1.0**
 
+![SECUREX Logo](securex.png)
+
 ## The Mission
 **Empowering the next generation of defenders.**
-The Adaptive SOC AI Framework is a state-of-the-art, interactive **Cyber Range** and educational SIEM platform. Our mission is to provide students and security professionals with a high-stakes, "Live Fire" simulation environment. By blending automated Infrastructure-as-Code (IaC) with a real-time AI Mentor (**AI Charlie Analyst**), we transform complex threat telemetry into an interactive learning journey from Associate Analyst to the Officers Club.
+The Adaptive SOC AI Framework is a state-of-the-art, interactive **Cyber Range** and educational SIEM platform. Our mission is to provide students and security professionals with a high-stakes, "Live Fire" simulation environment. By blending automated Infrastructure-as-Code (IaC) with a real-time AI Mentor (**AI Charlie Analyst**), we transform complex threat telemetry into an interactive learning journey from Associate Analyst to Advance Cyber Security Professionals.
 
 This platform delivers adaptive threat detection and guided remediation using supervised learning, unsupervised behavioral analysis (**Isolation Forest**), and Large Language Model (LLM) integration.
 
