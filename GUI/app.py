@@ -430,8 +430,15 @@ def main() -> None:
         # Automated Simulation Engine
         if breach_sim:
             current_time = time.time()
-            # Automated injection interval: 300s (5 mins). Set to 15s for demo visibility if preferred.
-            if current_time - st.session_state.last_auto_injection > 300:
+            elapsed = current_time - st.session_state.last_auto_injection
+            remaining = max(0, int(300 - elapsed))
+            mins, secs = divmod(remaining, 60)
+            
+            countdown_html = f'<div style="border:1px solid #00FF00;padding:10px;margin-bottom:20px;text-align:center;background:rgba(0,255,0,0.05);"><span style="color:#00FF00;font-size:0.65rem;letter-spacing:1px;">T-MINUS NEXT BREACH</span><br><span style="color:#FFFFFF;font-size:1.4rem;font-family:monospace;">{mins:02d}:{secs:02d}</span></div>'
+            st.markdown(countdown_html, unsafe_allow_html=True)
+
+            # Automated injection interval: 300s (5 mins)
+            if elapsed > 300:
                 new_threat = random.choice(get_active_threats_data().to_dict('records')).copy()
                 new_threat["ID"] = f"TR-AUTO-{random.randint(1000, 9999)}"
                 new_threat["Time"] = datetime.now().strftime("%H:%M:%S")
