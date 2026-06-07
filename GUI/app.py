@@ -326,7 +326,7 @@ def render_ai_analyst() -> None:
     if st.session_state.show_intel:
         intel_guidance = f"""
         <br><br>
-        > 🤖 AI CHARLIE: Intelligence required? Understood.<br>
+        > 🤖 AI CHARLIE ANALYST: Intelligence required? Understood.<br>
         > RECOMMENDED CHANNELS:<br>
         > - <a href="https://attack.mitre.org/techniques/{latest['MITRE']}/" target="_blank" style="color:#00FF00;">MITRE ATT&CK: {latest['MITRE']}</a><br>
         > - <a href="https://nvd.nist.gov/vuln/detail/{latest['CVE']}" target="_blank" style="color:#00FF00;">NVD DETAILS: {latest['CVE']}</a><br>
@@ -336,12 +336,12 @@ def render_ai_analyst() -> None:
 
     st.sidebar.markdown(f"""
     <div class="analyst-terminal">
-        > ACCESSING CO-PILOT...<br>
+        > ACCESSING AI CHARLIE ANALYST...<br>
         > RANK: {current_rank}<br>
         > SCORE: {st.session_state.points} XP<br>
         -------------------------<br>
-        > 🤖 AI CHARLIE: Commander, we have a breach! {latest['Vector']} detected.<br><br>
-        > LOG: "{latest['Insight']}"{intel_guidance}<br>
+        > 🤖 AI CHARLIE ANALYST: Commander, we have a breach! {latest.get('Vector', 'Unknown')} detected.<br><br>
+        > LOG: "{latest.get('Insight', 'Metadata unavailable for this vector.')}"{intel_guidance}<br>
         > ADVISORY: Which playbook protocol should we initiate? 
     </div>
     """, unsafe_allow_html=True)
@@ -350,9 +350,9 @@ def render_ai_analyst() -> None:
         st.session_state.show_intel = not st.session_state.show_intel
         st.rerun()
 
-    for action in latest['Playbook']:
+    for action in latest.get('Playbook', []):
         if st.sidebar.button(f"EXECUTE: {action}", key=f"play_{latest['ID']}_{action}"):
-            if action == latest['Correct']:
+            if action == latest.get('Correct'):
                 st.balloons()
                 st.session_state.points += 10
                 st.session_state.threat_log.pop(0)
@@ -374,6 +374,8 @@ def render_pipeline_status() -> None:
 def main() -> None:
     if 'threat_log' not in st.session_state:
         get_active_threats_data()
+    if 'threat_count' not in st.session_state:
+        st.session_state.threat_count = 17
 
     with st.sidebar:
         render_ai_analyst()
@@ -386,6 +388,7 @@ def main() -> None:
             new_threat["Time"] = datetime.now().strftime("%H:%M:%S")
             # Prepend to keep latest on top
             st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
+            st.session_state.threat_count += 1
             st.rerun()
 
     # TACTICAL ENGINE
@@ -394,7 +397,7 @@ def main() -> None:
     active_breach_mode = breach_sim or (latest_critical is not None)
 
     inject_custom_css(breach_active=active_breach_mode)
-    render_header()
+    render_header(st.session_state.threat_count)
     
     map_lat, map_lon = None, None
     if active_breach_mode and latest_critical:

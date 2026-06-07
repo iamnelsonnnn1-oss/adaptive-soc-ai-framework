@@ -8,6 +8,9 @@
     "lat": 38.8977,
     "lon": -77.0365,
     "MITRE": "T1203",
-    "CVE": "CVE-2023-XXXXX"
+    "CVE": "CVE-2023-XXXXX",
+    "Playbook": ["Disable Stack Exec", "Patch Kernel", "ASLR Enable"],
+    "Correct": "Patch Kernel",
+    "Insight": "Zero-day buffer overflow detected in local sensor driver. Potential for arbitrary code execution."
   }
 ]
