@@ -561,7 +561,8 @@ def main() -> None:
         'show_hint': False,
         'next_interval': 10,
         'auto_step': 0,
-        'breach_sim_active': False
+        'breach_sim_active': False,
+        'gemini_api_key': st.secrets.get("GEMINI_API_KEY", "")
     }
     
     for key, val in session_defaults.items():
