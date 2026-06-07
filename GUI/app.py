@@ -207,6 +207,22 @@ def get_active_threats_data() -> pd.DataFrame:
 
     threat_pool = [
         {
+            "ID": "TR-1001", "Severity": "Low", "Source": "Edge-Sec", "Vector": "Phishing Attempt", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1566.001", "CVE": "N/A",
+            "Playbook": ["Block Sender", "Quarantine Mail", "Ignore"], "Correct": "Quarantine Mail", 
+            "DistractorExplanations": {"Block Sender": "Insufficient. The payload is already in the inbox.", "Ignore": "High risk of credential theft."},
+            "Hint": "Isolate the delivery vector immediately.",
+            "Steps": ["1. Purge mail from all inboxes", "2. Block sender domain at gateway", "3. Force password reset for recipient."],
+            "Insight": "Entry-level phishing simulation: suspicious .zip link detected in HR mail queue."
+        },
+        {
+            "ID": "TR-1002", "Severity": "Medium", "Source": "Intra-Probe", "Vector": "Internal Network Scan", "Status": "Active", "lat": 35.6762, "lon": -139.6503, "MITRE": "T1046", "CVE": "N/A", 
+            "Playbook": ["Disable Port", "Quarantine Host", "Audit Logs"], "Correct": "Quarantine Host",
+            "DistractorExplanations": {"Disable Port": "Too narrow. Attacker will switch ports.", "Audit Logs": "Good for forensics, but doesn't stop the live scan."},
+            "Hint": "Stop the reconnaissance phase by isolating the source machine.",
+            "Steps": ["1. Move host to isolation VLAN", "2. Terminate scanning process", "3. Snapshot disk for analysis."],
+            "Insight": "Intermediate scan detected. Unauthorized Nmap activity from developer workstation."
+        },
+        {
             "ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", 
             "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Correct": "Patch Log4j", 
             "DistractorExplanations": {"Disable JNDI": "Suboptimal. The library remains on disk and can be bypassed.", "WAF Filter": "Ineffective against nested polymorphic lookups."},
@@ -502,7 +518,10 @@ def main() -> None:
         'show_intel_feed': False,
         'chat_history': [],
         'show_intel': False,
-        'show_hint': False
+        'show_hint': False,
+        'next_interval': 10,
+        'auto_step': 0,
+        'breach_sim_active': False
     }
     
     for key, val in session_defaults.items():
@@ -513,24 +532,47 @@ def main() -> None:
         st.markdown("<p style='color: #FFFFFF; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
         breach_sim = st.toggle("SIMULATE SYSTEM BREACH", value=False)
 
+        # Handle Toggle Reset Logic
+        if breach_sim and not st.session_state.breach_sim_active:
+            st.session_state.last_auto_injection = time.time()
+            st.session_state.next_interval = 10
+            st.session_state.auto_step = 0
+            st.session_state.breach_sim_active = True
+        elif not breach_sim:
+            st.session_state.breach_sim_active = False
+
         # Real-Time Countdown Engine
         if breach_sim:
             current_time = time.time()
             elapsed = current_time - st.session_state.last_auto_injection
-            remaining = max(0, int(60 - elapsed)) # Set to 60s for higher training intensity
+            remaining = max(0, int(st.session_state.next_interval - elapsed))
             mins, secs = divmod(remaining, 60)
             
             countdown_html = f'<div style="border:1px solid #00FF00;padding:10px;margin-bottom:20px;text-align:center;background:rgba(0,255,0,0.05);"><span style="color:#00FF00;font-size:0.65rem;letter-spacing:1px;">T-MINUS NEXT BREACH</span><br><span style="color:#FFFFFF;font-size:1.4rem;font-family:monospace;">{mins:02d}:{secs:02d}</span></div>'
             st.markdown(countdown_html, unsafe_allow_html=True)
 
-            if elapsed >= 60:
-                new_threat = random.choice(get_active_threats_data().to_dict('records')).copy()
+            if elapsed >= st.session_state.next_interval:
+                pool = get_active_threats_data()
+                
+                # Severity Progression Logic
+                if st.session_state.auto_step == 0:
+                    candidates = pool[pool['Severity'] == 'Low']
+                elif st.session_state.auto_step == 1:
+                    candidates = pool[pool['Severity'] == 'Medium']
+                else:
+                    candidates = pool[pool['Severity'].isin(['High', 'Critical'])]
+                
+                if candidates.empty: candidates = pool
+                
+                new_threat = candidates.sample(1).to_dict('records')[0].copy()
                 new_threat["ID"] = f"TR-AUTO-{random.randint(1000, 9999)}"
                 new_threat["Time"] = datetime.now().strftime("%H:%M:%S")
                 st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
                 st.session_state.threat_count += 1
                 st.session_state.assets_count += random.randint(10, 100)
                 st.session_state.last_auto_injection = current_time
+                st.session_state.next_interval = 60
+                st.session_state.auto_step += 1
                 st.rerun()
 
         st.session_state.show_intel_feed = st.checkbox("OPEN SIEM INTELLIGENCE FEED", value=st.session_state.show_intel_feed)
