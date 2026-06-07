@@ -18,8 +18,9 @@ st.set_page_config(
 
 
 def inject_custom_css(breach_active: bool = False) -> None:
-    alert_style = '.stApp { animation: alert-flash 1.5s infinite !important; } @keyframes alert-flash { 0%, 100% { background-color: #000000; } 50% { background-color: #051a05; } }' if breach_active else ''
+    alert_style = '.stApp { animation: alert-flash 1.5s infinite !important; } @keyframes alert-flash { 0%, 100% { background-color: #000000; } 50% { background-color: #001a00; } }' if breach_active else ''
     ai_breach_style = '.ai-analyst-box { border: 2px solid #00FF00 !important; box-shadow: 0 0 30px rgba(0, 255, 0, 0.2) !important; transform: scale(1.02); transition: all 0.5s ease; }' if breach_active else ''
+    map_flash = '.map-container { animation: map-pulse-border 1s infinite !important; border: 2px solid #00FF00 !important; } @keyframes map-pulse-border { 0%, 100% { box-shadow: 0 0 5px #00FF00; } 50% { box-shadow: 0 0 25px #00FF00; } }' if breach_active else ''
     spin_speed = "5s" if breach_active else "20s"
     st.markdown("""
         <style>
@@ -85,7 +86,7 @@ def inject_custom_css(breach_active: bool = False) -> None:
         }
 
         /* Kinetic Globe Projection Control */
-        .globe-texture-svg { 
+        .globe-texture { 
             animation: globe-spin """ + spin_speed + """ linear infinite !important; 
             opacity: 0.4; 
         }
@@ -178,6 +179,7 @@ def inject_custom_css(breach_active: bool = False) -> None:
         /* Breach Simulation Overlay */
         """ + alert_style + """
         """ + ai_breach_style + """
+        """ + map_flash + """
         </style>
     """, unsafe_allow_html=True)
 
