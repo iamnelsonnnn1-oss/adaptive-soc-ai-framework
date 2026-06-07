@@ -95,9 +95,9 @@ IR_PHASE_CHALLENGES = {
 }
 
 GLOBAL_INTEL_FEED = [
-    {"source": "CISA", "title": "AA24-051A: Phishing Campaign targeting US Govt", "severity": "High"},
-    {"source": "BleepingComputer", "title": "New Ransomware-as-a-Service 'X-Force' Emerging", "severity": "Critical"},
-    {"source": "KrebsOnSecurity", "title": "Critical Zero-Day in Common Firewall Firmware", "severity": "Medium"}
+    {"source": "CISA", "title": "AA24-051A: Phishing Campaign targeting US Govt", "severity": "High", "url": "https://www.cisa.gov/news-events/alerts/2024/02/21/cisa-releases-advisory-phishing-campaign-targeting-us-government-entities"},
+    {"source": "BleepingComputer", "title": "New Ransomware-as-a-Service 'X-Force' Emerging", "severity": "Critical", "url": "https://www.bleepingcomputer.com/"},
+    {"source": "KrebsOnSecurity", "title": "Critical Zero-Day in Common Firewall Firmware", "severity": "Medium", "url": "https://krebsonsecurity.com/"}
 ]
 
 
@@ -456,79 +456,66 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
 @st.dialog("TACTICAL REMEDIATION INTERFACE")
 def remediation_dialog(latest):
     """Drill-down window for incident analysis and playbook execution."""
-    if 'triage_passed' not in st.session_state:
-        st.session_state.triage_passed = False
-
-    st.markdown(f"### 🛡️ TRIAGE: {latest.get('Vector')}")
+    st.markdown(f"### 🛡️ RESPONDER CONSOLE: {latest.get('Vector')} ({latest.get('ID')})")
     
     col1, col2 = st.columns(2)
     vt_link = f"https://www.virustotal.com/gui/search/{latest.get('CVE', latest.get('Vector'))}"
     abuse_link = f"https://www.abuseipdb.com/check/{latest.get('Source')}"
-    col1.markdown(f'<a href="{vt_link}" target="_blank" class="research-btn">🔍 VirusTotal Search</a>', unsafe_allow_html=True)
-    col2.markdown(f'<a href="{abuse_link}" target="_blank" class="research-btn">🛡️ AbuseIPDB Check</a>', unsafe_allow_html=True)
-    st.write("")
-
-    if not st.session_state.triage_passed:
-        st.write("**Educational Challenge: Identify the first responder action.**")
-        q_options = latest.get('Playbook', [])
-        choice = st.radio("What is the first remediation step for this specific attack?", q_options)
-        
-        if st.button("CONFIRM ACTION"):
-            if choice == latest.get('Correct'):
-                st.success(f"✅ CORRECT: {choice}. This action directly targets the root cause.")
-                st.session_state.triage_passed = True
-                st.rerun()
-            else:
-                st.error(f"❌ INCORRECT: {latest.get('DistractorExplanations', {}).get(choice, 'Protocol violation.')}")
-        return
+    col1.markdown(f'<a href="{vt_link}" target="_blank" class="research-btn" style="width:100%; text-align:center;">🔍 VirusTotal Search</a>', unsafe_allow_html=True)
+    col2.markdown(f'<a href="{abuse_link}" target="_blank" class="research-btn" style="width:100%; text-align:center;">🛡️ AbuseIPDB Check</a>', unsafe_allow_html=True)
 
     # Forensic Workbench Section
     with st.expander("🛠️ FORENSIC WORKBENCH (RAW DATA)", expanded=False):
         forensics = latest.get("Forensics", {"type": "UNAVAILABLE", "data": "No forensic data captured for this incident."})
         st.info(f"DATA TYPE: {forensics['type']}")
-        
         if isinstance(forensics['data'], dict):
             st.json(forensics['data'])
         else:
             st.code(forensics['data'], language="bash")
-        
-        st.markdown("""<p style="font-size:0.7rem; color:#777777;">
-            Use the raw artifacts above to correlate the Vector with NIST/MITRE intelligence.
-        </p>""", unsafe_allow_html=True)
+        st.markdown("""<p style="font-size:0.7rem; color:#777777;">Use the raw artifacts above to correlate the Vector with NIST/MITRE intelligence.</p>""", unsafe_allow_html=True)
 
-    steps = [
-        "1. CONTAINMENT: Isolate affected systems",
-        "2. PRESERVATION: Secure evidence for forensics",
-        "3. COMMUNICATION: Notify stakeholders & leadership",
-        "4. ANALYSIS: Conduct Root Cause Analysis (RCA)",
-        "5. ERADICATION: Apply patches and technical fixes",
-        "6. RECOVERY: Restore systems & verify integrity",
-        "7. POST-INCIDENT: Monitor for recurrence"
+    # 8-Step Lifecycle Progress
+    step_idx = st.session_state.get('remediation_step', 1)
+    phase_names = [
+        "1. ANALYSIS / TRIAGE",
+        "2. CONTAINMENT",
+        "3. PRESERVATION",
+        "4. COMMUNICATION",
+        "5. ERADICATION",
+        "6. RECOVERY",
+        "7. LESSONS LEARNED",
+        "8. FINAL REMEDIATION"
     ]
+    current_phase = phase_names[min(step_idx - 1, len(phase_names) - 1)]
 
+    st.divider()
     st.markdown(f"""
         <div style="background: rgba(0, 20, 0, 0.9); padding: 20px; border: 1px solid #00FF00; font-family: monospace; color: #00FF00;">
-            <b style="font-size: 1.1rem;">> INCIDENT: {latest.get('ID')}</b><br/>
-            > IR PHASE: Step {st.session_state.remediation_step} of 7<br/>
-            <hr style="border: 0; border-top: 1px solid rgba(0,255,0,0.2); margin: 10px 0;">
-            > {steps[st.session_state.remediation_step-1]}
+            <b style="font-size: 1.1rem;">> IR PHASE: {current_phase}</b> (Step {step_idx} of 8)
         </div>
     """, unsafe_allow_html=True)
-    
-    st.write("### Tactical Response Actions:")
-    
-    if st.session_state.remediation_step < 7:
-        if st.button(f"EXECUTE {steps[st.session_state.remediation_step-1].split(':')[0]}", use_container_width=True):
-            st.session_state.remediation_step += 1
-            st.rerun()
+
+    if step_idx < 8:
+        st.write(f"### Phase {step_idx} Knowledge Check")
+        challenge = IR_PHASE_CHALLENGES.get(step_idx)
+        choice = st.radio(f"**Tactical Question**: {challenge['q']}", challenge['options'], key=f"q_step_{step_idx}")
+        
+        if st.button("CONFIRM PROTOCOL", use_container_width=True):
+            if choice == challenge['correct']:
+                st.success(f"**CORRECT:** {challenge['exp']}")
+                time.sleep(1)
+                st.session_state.remediation_step += 1
+                st.rerun()
+            else:
+                st.error(f"**INCORRECT:** {challenge['exp']}")
     else:
-        st.write("Final Playbook Action Required:")
+        st.write("### 🚨 STEP 8: FINAL PLAYBOOK EXECUTION")
+        st.info("The incident has been analyzed and isolated. Select the final eradication/recovery playbook action to close the case.")
         for action in latest.get('Playbook', []):
             if st.button(f"INITIATE FINAL FIX: {action}", use_container_width=True):
                 if action == latest.get('Correct'):
                     # Correct Playbook Selection: Progress to Step 8 (Case Profile)
                     st.session_state.active_case = latest.copy()
-                    st.session_state.triage_passed = False
                     st.session_state.remediation_target = None
                     st.session_state.remediation_step = 1
                     st.rerun()
@@ -536,7 +523,6 @@ def remediation_dialog(latest):
                     st.error(f"MISSION FAILED: {latest.get('DistractorExplanations', {}).get(action, 'Incorrect protocol.')}")
 
     if st.button("Cancel Operation", use_container_width=True):
-        st.session_state.triage_passed = False
         st.session_state.remediation_target = None
         st.session_state.remediation_step = 1
         st.rerun()
@@ -728,7 +714,7 @@ def render_ai_analyst() -> None:
         st.session_state.gemini_api_key = st.sidebar.text_input(
             "🔗 Neural Link (Gemini API Key):", 
             type="password", 
-            help="Get a free key from Google AI Studio"
+            help="Get a free key from https://aistudio.google.com/app/apikey"
         )
 
     def handle_chat():
@@ -828,7 +814,7 @@ def render_global_intel() -> None:
         st.markdown(f"""
             <div style="background: rgba(255,255,255,0.02); padding: 10px; border-left: 2px solid {color}; margin-bottom: 5px;">
                 <span style="font-size: 0.6rem; color: {color}; font-weight: bold;">{intel['source']}</span><br>
-                <span style="font-size: 0.75rem; color: #FFFFFF;">{intel['title']}</span>
+                <a href="{intel['url']}" target="_blank" style="text-decoration:none; color: #FFFFFF; font-size: 0.75rem;">{intel['title']}</a>
             </div>
         """, unsafe_allow_html=True)
 
@@ -864,8 +850,7 @@ def initialize_session_state() -> None:
         "remediation_target": None,
         "active_case": None,
         "gemini_api_key": st.secrets.get("GEMINI_API_KEY", ""),
-        "user_profile": None,
-        "triage_passed": False
+        "user_profile": None
     }
     for key, val in defaults.items():
         if key not in st.session_state:
