@@ -622,8 +622,15 @@ def ask_ai_charlie(query, threat_context=None):
     except Exception as e:
         # Avoid leaking full stack traces or internal API details in the UI
         error_msg = str(e)
+        print(f"[ERROR] AI Charlie Connection Failed: {error_msg}")
+        if "429" in error_msg:
+            return "Neural Link Error: API Quota exceeded. Please wait a moment before trying again."
         if "API_KEY_INVALID" in error_msg:
             return "Neural Link Error: The provided API Key is invalid or expired."
+        if "User location is not supported" in error_msg:
+            return "Neural Link Error: Gemini API is not available in your current region."
+        if "quota" in error_msg.lower():
+            return "Neural Link Error: API Quota exceeded. Please verify your billing/usage limits."
         return "Neural Link Error: Unable to establish connection to AI Charlie. Check network or API quotas."
 
 
@@ -752,11 +759,24 @@ def render_ai_analyst() -> None:
             st.session_state.ai_chat_input = ""
 
     st.sidebar.text_input("Neural Link Command:", key="ai_chat_input", on_change=handle_chat, placeholder="Ask Charlie for triage help...")
+    
+    # Neural Link Diagnostic Tool
+    if not api_key:
+        st.sidebar.warning("⚠️ Neural Link Key Missing. Connect via Secrets or Sidebar.")
+    else:
+        if st.sidebar.button("⚡ TEST NEURAL LINK", use_container_width=True):
+            with st.sidebar:
+                with st.spinner("Testing Link..."):
+                    test_resp = ask_ai_charlie("Perform a short systems check. Are you online?")
+                    if "Error" in test_resp:
+                        st.error(test_resp)
+                    else:
+                        st.success("Handshake Successful: AI Charlie is Responsive.")
 
-    col1, col2 = st.sidebar.columns(2)
-    if col1.button("📡 INTEL", key="intel_btn", use_container_width=True):
+    col_a, col_b = st.sidebar.columns(2)
+    if col_a.button("📡 INTEL", key="intel_btn", use_container_width=True):
         st.session_state.show_intel = not st.session_state.show_intel; st.rerun()
-    if col2.button("💡 HINT", key="hint_btn", use_container_width=True):
+    if col_b.button("💡 HINT", key="hint_btn", use_container_width=True):
         st.session_state.show_hint = not st.session_state.show_hint; st.rerun()
 
     for action in latest.get('Playbook', []):
