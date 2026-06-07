@@ -12,9 +12,14 @@ import time
 import google.generativeai as genai
 
 
+# Resolve logo path for brand consistency across UI and browser favicon
+logo_path = os.path.join(os.path.dirname(__file__), "securex.png")
+if not os.path.exists(logo_path):
+    logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
+
 st.set_page_config(
     page_title="Adaptive SOC AI Framework",
-    page_icon="🛡️",
+    page_icon=logo_path if os.path.exists(logo_path) else "🛡️",
     layout="wide",
 )
 
@@ -272,10 +277,6 @@ def get_base64_logo(file_path: str) -> str:
 
 
 def render_header(threat_count: int, assets_count: int) -> None:
-    logo_path = os.path.join(os.path.dirname(__file__), "securex.png")
-    if not os.path.exists(logo_path):
-        logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
-    
     logo_b64 = get_base64_logo(logo_path)
     logo_html = f'<img class="logo-img" src="data:image/png;base64,{logo_b64}" style="height:150px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">' if logo_b64 else ""
     
