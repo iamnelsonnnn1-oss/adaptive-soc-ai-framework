@@ -392,13 +392,12 @@ def render_ai_engine_telemetry() -> None:
 
 
 def render_active_threats() -> None:
-    """Renders the live telemetry feed with safety checks for undefined variables."""
-    # Explicitly retrieve threat_log from session state at start of scope
-    threat_log = st.session_state.get("threat_log", []) or []
+    """Renders the live telemetry feed with safety scope checks."""
+    threat_log = st.session_state.get('threat_log', []) or []
     
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
 
-    if not threat_log:
+    if not threat_log or len(threat_log) == 0:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>ALL THREATS NEUTRALIZED. SECTOR CLEAR.</p>", unsafe_allow_html=True)
         return
 
@@ -432,7 +431,6 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     except:
         curr_lat, curr_lon = 51.5074, -0.1278
 
-    # Ensure local threat_log is defined for map rendering
     threat_log = st.session_state.get('threat_log', []) or []
     threats_df = pd.DataFrame(threat_log)
     
@@ -488,9 +486,8 @@ def remediation_dialog(latest):
     col1.markdown(f'<a href="{vt_link}" target="_blank" class="research-btn" style="width:100%; text-align:center;">🔍 VirusTotal Search</a>', unsafe_allow_html=True)
     col2.markdown(f'<a href="{abuse_link}" target="_blank" class="research-btn" style="width:100%; text-align:center;">🛡️ AbuseIPDB Check</a>', unsafe_allow_html=True)
 
-    # Forensic Workbench Section
     with st.expander("🛠️ FORENSIC WORKBENCH (RAW DATA)", expanded=False):
-        forensics = latest.get("Forensics", {"type": "UNAVAILABLE", "data": "No forensic data captured for this incident."})
+        forensics = latest.get("Forensics", {"type": "UNAVAILABLE", "data": "No forensic data available."})
         st.info(f"DATA TYPE: {forensics['type']}")
         if isinstance(forensics['data'], dict):
             st.json(forensics['data'])
@@ -498,7 +495,6 @@ def remediation_dialog(latest):
             st.code(forensics['data'], language="bash")
         st.markdown("""<p style="font-size:0.7rem; color:#777777;">Use the raw artifacts above to correlate the Vector with NIST/MITRE intelligence.</p>""", unsafe_allow_html=True)
 
-    # 8-Step Lifecycle Progress
     step_idx = st.session_state.get('remediation_step', 1)
     phase_names = [
         "1. ANALYSIS / TRIAGE",
@@ -546,14 +542,14 @@ def remediation_dialog(latest):
                 else:
                     st.error(f"MISSION FAILED: {latest.get('DistractorExplanations', {}).get(action, 'Incorrect protocol.')}")
 
-    if st.button("Cancel Operation", use_container_width=True):
+    if st.button("ABORT ANALYSIS", use_container_width=True):
         st.session_state.remediation_target = None
         st.session_state.remediation_step = 1
         st.rerun()
 
 
 def render_case_profile(case_data):
-    """Detailed Case View: Triggered when a playbook is executed correctly."""
+    """Detailed Case View: Post-playbook analysis and documentation."""
     st.markdown(f"## CASE ARCHIVE: {case_data.get('ID')}")
     
     st.markdown(f"""
@@ -564,7 +560,7 @@ def render_case_profile(case_data):
                     <h3 style="color: #00FF00;">INCIDENT DESCRIPTION</h3>
                     <p style="color: #FFFFFF; font-size: 0.95rem; line-height: 1.6;">{case_data.get('Insight')}</p>
                     <h3 style="color: #00FF00; margin-top: 20px;">TECHNICAL FIELD STEPS</h3>
-                    <p style="color: #AAAAAA; font-family: monospace;">{" ".join(case_data.get('Steps', [])) if isinstance(case_data.get('Steps'), list) else 'Metadata unavailable.'}</p>
+                    <p style="color: #AAAAAA; font-family: monospace;">{" | ".join(case_data.get('Steps', [])) if isinstance(case_data.get('Steps'), list) else 'Protocol record empty.'}</p>
                 </div>
                 <div style="width: 300px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 30px;">
                     <h4 style="color: #00FF00;">FORENSIC METADATA</h4>
@@ -584,7 +580,7 @@ def render_case_profile(case_data):
     questions = case_data.get('ReportQuestions', ["General Summary of the event:", "Technical steps taken:", "Lessons learned:"])
     user_answers = []
     for i, q in enumerate(questions):
-        ans = st.text_area(f"DOCUMENTATION POINT: {q}", height=100, key=f"ans_{case_data['ID']}_{i}", placeholder="Enter technical evidence here...")
+        ans = st.text_area(f"FIELD NOTE: {q}", height=100, key=f"ans_{case_data['ID']}_{i}", placeholder="Document evidence...")
         user_answers.append(f"Q: {q}\nA: {ans}")
 
     user_report = "\n\n".join(user_answers)
@@ -605,7 +601,6 @@ def render_case_profile(case_data):
 
     st.write("")
     if st.button("← RETURN TO COMMAND CENTER", type="primary"):
-        # Award XP and remove threat upon archive
         st.session_state.points += 10
         st.session_state.threat_log = [t for t in st.session_state.threat_log if t.get('ID') != case_data.get('ID')]
         st.session_state.active_case = None
@@ -615,7 +610,6 @@ def render_case_profile(case_data):
 
 def ask_ai_charlie(query, threat_context=None):
     try:
-        # Priority: Stored session key > Streamlit secrets
         api_key = st.session_state.get('gemini_api_key')
         if not api_key:
             api_key = st.secrets.get("GEMINI_API_KEY")
@@ -627,15 +621,10 @@ def ask_ai_charlie(query, threat_context=None):
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"You are AI Charlie, an expert SOC mentor. Incident: {threat_context}. Student asks: {query}. Keep it technical."
         
-        # Verification: Log prompt to console for developer audit
-        print(f"[DEBUG] AI Prompt Sent: {prompt}")
-        
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        # Avoid leaking full stack traces or internal API details in the UI
         error_msg = str(e)
-        print(f"[ERROR] AI Charlie Connection Failed: {error_msg}")
         if "429" in error_msg:
             return "Neural Link Error: API Quota exceeded. Please wait a moment before trying again."
         if "API_KEY_INVALID" in error_msg:
@@ -667,7 +656,6 @@ def fetch_cve_details(cve_id: str) -> str:
 
 
 def render_user_profile() -> None:
-    """Handles user signup, login, and progress tracking."""
     if 'user_profile' not in st.session_state:
         st.session_state.user_profile = None
 
@@ -716,10 +704,9 @@ def render_ai_analyst() -> None:
         "⫸ INCIDENT COMMANDER (EXPERT)", "⌬ SYSTEMS ARCHITECT (MASTER)", 
         "🌐 DIGITAL SOVEREIGN (SME)"
     ]
-    points = st.session_state.get('points', 0) + (st.session_state.user_profile['xp'] if st.session_state.user_profile else 0)
+    points = st.session_state.get('points', 0)
     current_rank = ranks[min(points // 20, len(ranks)-1)]
 
-    # Ensure local threat_log is defined for AI Analyst view
     threat_log = st.session_state.get("threat_log", []) or []
     if not threat_log or not isinstance(threat_log[0], dict):
         st.sidebar.markdown('<div class="analyst-terminal">> SYSTEM SECURE.<br>> NO ACTIVE THREATS.</div>', unsafe_allow_html=True)
@@ -730,17 +717,14 @@ def render_ai_analyst() -> None:
     if st.session_state.show_intel and latest:
         mitre_id = latest.get('MITRE', '')
         
-        # Reset summary if the technique has changed
         if st.session_state.get('last_mitre_id') != mitre_id:
             st.session_state.intel_summary = ""
             st.session_state.last_mitre_id = mitre_id
 
-        # Fetch summary if it doesn't exist
         if not st.session_state.get('intel_summary') and "T" in mitre_id:
             summary_prompt = f"Briefly summarize MITRE technique {mitre_id}. Provide one sentence on what it is, one on detection, and one on mitigation."
             st.session_state.intel_summary = ask_ai_charlie(summary_prompt, mitre_id)
 
-        # Ensure sub-techniques use the correct URL format
         mitre_url_path = mitre_id.replace(".", "/")
         mitre_link = f"<a href='https://attack.mitre.org/techniques/{mitre_url_path}/' target='_blank' style='color:#00FF00;'>MITRE: {mitre_id}</a>" if "T" in mitre_id else mitre_id
         
@@ -761,12 +745,12 @@ def render_ai_analyst() -> None:
 
     st.sidebar.markdown(f"""
     <div class="analyst-terminal">
-        > ACCESSING AI CHARLIE ANALYST...<br>
+            > INITIALIZING AI CHARLIE ANALYST...<br>
         > RANK: {current_rank}<br>
         > NEURAL LINK: {link_status}<br>
         > SCORE: {st.session_state.points} XP<br>
         -------------------------<br>
-        > 🤖 AI CHARLIE: Commander, {latest.get('Vector', 'Unknown Vector')} detected.<br><br>
+            > 🤖 AI CHARLIE: Commander, {latest.get('Vector', 'Alert')} detected.<br><br>
         > LOG: "{latest.get('Insight')}"{intel_text}{hint_text}{error_text}{chat_display}<br><br>
         > ADVISORY: Ask me anything or execute protocol.
     </div>
@@ -782,7 +766,6 @@ def render_ai_analyst() -> None:
     def handle_chat():
         query = st.session_state.ai_chat_input
         if query:
-            # Build enriched context including Forensic Workbench data
             forensics = latest.get('Forensics', {})
             enriched_context = f"Vector: {latest.get('Vector')}, Evidence: {json.dumps(forensics)}"
             
@@ -790,9 +773,8 @@ def render_ai_analyst() -> None:
             st.session_state.chat_history.append({"user": query, "ai": ai_resp})
             st.session_state.ai_chat_input = ""
 
-    st.sidebar.text_input("Neural Link Command:", key="ai_chat_input", on_change=handle_chat, placeholder="Ask Charlie for triage help...")
+    st.sidebar.text_input("NEURAL LINK CMD:", key="ai_chat_input", on_change=handle_chat, placeholder="Ask Charlie...")
     
-    # Neural Link Diagnostic Tool
     if not api_key:
         st.sidebar.warning("⚠️ Neural Link Key Missing. Connect via Secrets or Sidebar.")
     else:
@@ -811,7 +793,6 @@ def render_ai_analyst() -> None:
     if col_b.button("💡 HINT", key="hint_btn", use_container_width=True):
         st.session_state.show_hint = not st.session_state.show_hint; st.rerun()
 
-    # Live CVE Threat Intelligence Sidebar Tab
     with st.sidebar.expander("🔍 CVE THREAT INTEL", expanded=False):
         cve_id = latest.get('CVE', 'N/A')
         if cve_id != 'N/A' and "XXXXX" not in cve_id:
@@ -826,7 +807,6 @@ def render_ai_analyst() -> None:
     for action in latest.get('Playbook', []):
         if st.sidebar.button(f"EXECUTE: {action}", key=f"act_{latest['ID']}_{action}", use_container_width=True):
             if action == latest.get('Correct'):
-                st.balloons()
                 st.session_state.points += 10
                 st.session_state.threat_log.pop(0)
                 st.session_state.intel_summary = ""
@@ -845,7 +825,6 @@ def render_ai_analyst() -> None:
 
 def render_incident_ledger() -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 40px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// MASTER INCIDENT LEDGER</p>", unsafe_allow_html=True)
-    # Ensure local threat_log is defined for Ledger view
     threat_log = st.session_state.get("threat_log", []) or []
     
     st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 20px 0;'>", unsafe_allow_html=True)
@@ -880,7 +859,6 @@ def render_incident_ledger() -> None:
 def render_risk_dashboard() -> None:
     """Aggregated risk assessment mirroring Chronicle/Splunk SOC views."""
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// COMMAND RISK ASSESSMENT</p>", unsafe_allow_html=True)
-    # Ensure local threat_log is defined for Risk calculation
     threat_log = st.session_state.get("threat_log", []) or []
     critical_count = len([t for t in threat_log if t.get('Severity') == 'Critical'])
     
@@ -911,7 +889,6 @@ def render_global_intel() -> None:
 
 
 def render_pipeline_status() -> None:
-    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// AUTOMATION HEALTH</p>", unsafe_allow_html=True)
     pipelines = get_pipeline_status_data()
     for _, row in pipelines.iterrows():
         card_html = f'<div class="pipeline-card"><div class="pipeline-name">{row["Pipeline"]}</div><div style="color:#00FF00;font-size:0.75rem;font-weight:bold;margin-top:4px;">● SECURE</div></div>'
@@ -919,7 +896,6 @@ def render_pipeline_status() -> None:
 
 
 def initialize_session_state() -> None:
-    """Ensures all required tactical variables are initialized in the session state."""
     defaults = {
         "threat_log": [],
         "threat_count": 0,
@@ -954,12 +930,10 @@ def main() -> None:
     initialize_session_state()
     perform_system_hygiene()
 
-    # Persistent Dialog Engine
     if st.session_state.remediation_target:
         remediation_dialog(st.session_state.remediation_target)
 
     if st.session_state.active_case:
-        inject_custom_css(breach_active=False)
         render_header(st.session_state.threat_count, st.session_state.assets_count)
         render_case_profile(st.session_state.active_case)
         st.stop()
@@ -968,7 +942,6 @@ def main() -> None:
         st.markdown("<p style='color: #FFFFFF; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
         breach_sim = st.toggle("SIMULATE SYSTEM BREACH", value=False)
 
-        # Handle Toggle Reset Logic
         if breach_sim and not st.session_state.breach_sim_active:
             st.session_state.last_auto_injection = time.time()
             st.session_state.next_interval = 10
@@ -977,7 +950,6 @@ def main() -> None:
         elif not breach_sim:
             st.session_state.breach_sim_active = False
 
-        # Real-Time Countdown Engine
         if breach_sim:
             current_time = time.time()
             elapsed = current_time - st.session_state.last_auto_injection
@@ -990,7 +962,6 @@ def main() -> None:
             if elapsed >= st.session_state.next_interval:
                 pool = get_active_threats_data()
                 
-                # Severity Progression Logic
                 if st.session_state.auto_step == 0:
                     candidates = pool[pool['Severity'] == 'Low']
                 elif st.session_state.auto_step == 1:
@@ -1022,7 +993,6 @@ def main() -> None:
             new_threat = random.choice(get_active_threats_data().to_dict('records')).copy()
             new_threat["ID"] = f"TR-{random.randint(2000, 9999)}"
             new_threat["Time"] = datetime.now(ZoneInfo("Europe/Berlin")).strftime("%H:%M:%S")
-            # Prepend to keep latest on top
             st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
             st.session_state.threat_count += 1
             st.session_state.assets_count += random.randint(5, 50)
@@ -1031,7 +1001,6 @@ def main() -> None:
         st.markdown("<br><br><br><br>", unsafe_allow_html=True)
         st.markdown("<div style='border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;'><p style='color: #555555; font-size: 0.6rem; line-height: 1.2;'>// GDPR COMPLIANCE: THIS SYSTEM PROCESSES TEMPORARY IP DATA FOR GEOSPATIAL PROJECTION. DATA IS VOLATILE AND NOT PERSISTED BEYOND THE ACTIVE SESSION. [ FRAMEWORK VERSION 1.0 ]</p></div>", unsafe_allow_html=True)
 
-    # Initialize main scope threat_log
     threat_log = st.session_state.get('threat_log', []) or []
     latest_critical = next((t for t in threat_log if t.get("Severity") == "Critical"), None)
     active_breach_mode = breach_sim or (latest_critical is not None)
@@ -1043,7 +1012,6 @@ def main() -> None:
     render_risk_dashboard()
     render_global_intel()
 
-    # SIEM Intelligence Window Overlay
     if st.session_state.get('show_intel_feed') and threat_log:
         latest = threat_log[0]
         st.markdown(f"""
@@ -1054,12 +1022,10 @@ def main() -> None:
             </div>
         """, unsafe_allow_html=True)
 
-    # Dynamic Map Zoom based on latest Critical Threat
     map_lat, map_lon = None, None
     if active_breach_mode and latest_critical:
         map_lat, map_lon = latest_critical['lat'], latest_critical['lon']
     
-    # Main Command Deck
     col_left, col_center, col_right = st.columns([1.2, 4, 1.2])
     
     with col_left:
@@ -1071,13 +1037,11 @@ def main() -> None:
     with col_right:
         render_pipeline_status()
 
-    # Infrastructure Control Plane (Metrics moved to bottom for space)
     st.divider()
     render_ai_engine_telemetry()
     render_ai_analyst()
     render_incident_ledger()
 
-    # Heartbeat: Tick every second if breach simulation is active
     if breach_sim:
         time.sleep(1)
         st.rerun()
