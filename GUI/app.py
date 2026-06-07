@@ -428,10 +428,10 @@ def remediation_dialog(latest):
         for action in latest.get('Playbook', []):
             if st.button(f"INITIATE FINAL FIX: {action}", use_container_width=True):
                 if action == latest.get('Correct'):
-                # Correct Playbook Selection: Progress to Step 8 (Case Profile)
-                st.session_state.active_case = latest.copy()
-                st.session_state.remediation_target = None
-                st.session_state.remediation_step = 1
+                    # Correct Playbook Selection: Progress to Step 8 (Case Profile)
+                    st.session_state.active_case = latest.copy()
+                    st.session_state.remediation_target = None
+                    st.session_state.remediation_step = 1
                     st.rerun()
                 else:
                     st.error(f"MISSION FAILED: {latest.get('DistractorExplanations', {}).get(action, 'Incorrect protocol.')}")
