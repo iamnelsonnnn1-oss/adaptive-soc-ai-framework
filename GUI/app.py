@@ -220,7 +220,7 @@ def render_active_threats() -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
     for _, row in threats.iterrows():
         severity_color = {"Critical": "#00FF00", "High": "#FFFFFF", "Medium": "#777777", "Low": "#444444"}.get(row["Severity"], "#222222")
-        threat_html = f'<div style="margin-bottom:12px;border-left:2px solid {severity_color};padding-left:10px;"><div style="font-size:0.75rem;color:#FFFFFF;">[{row["Time"]}] <span style="color:{severity_color};">{row["Source"]}</span></div><div style="font-size:0.8rem;color:#FFFFFF;font-weight:bold;">{row["Vector"]}</div><div style="font-size:0.7rem;color:#00FF00;margin-top:2px;font-family:\'Courier New\',monospace;">{row["MITRE"]} | {row["CVE"]}</div></div>'
+        threat_html = f'<div style="margin-bottom:12px;border-left:2px solid {severity_color};padding-left:10px;"><div style="font-size:0.75rem;color:#FFFFFF;">[{row["Time"]}] <span style="color:{severity_color};">{row["Source"]}</span></div><div style="font-size:0.8rem;color:#FFFFFF;font-weight:bold;">{row["Vector"]}</div><div style="font-size:0.7rem;color:#00FF00;margin-top:2px;font-family:\'Courier New\',monospace;"><a href="https://attack.mitre.org/techniques/{row["MITRE"]}/" target="_blank" style="color:#00FF00;text-decoration:none;">{row["MITRE"]}</a> | <a href="https://nvd.nist.gov/vuln/detail/{row["CVE"]}" target="_blank" style="color:#00FF00;text-decoration:none;">{row["CVE"]}</a></div></div>'
         st.markdown(threat_html, unsafe_allow_html=True)
 
 
