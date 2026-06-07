@@ -195,6 +195,7 @@ def get_active_threats_data() -> pd.DataFrame:
                 local_data = json.load(f)
         except Exception:
             pass
+
     threat_pool = [
         {
             "ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", 
@@ -252,7 +253,7 @@ def render_header(threat_count: int = 0, assets_count: int = 0) -> None:
     logo_b64 = get_base64_logo(logo_path)
     logo_html = f'<img class="logo-img" src="data:image/png;base64,{logo_b64}" style="height:150px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">' if logo_b64 else ""
     
-    header_html = f'<div class="header-container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;width:100%;"><div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:2.2rem;font-weight:900;letter-spacing:4px;color:#00FF00;">SECUREX COMMAND</h1><p style="color:#FFFFFF;margin:5px 0 0 0;font-size:0.85rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div class="header-metrics" style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;justify-content:center;"><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#00FF00;font-weight:bold;font-size:1.2rem;">17</div></div><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">2,491</div></div><div style="background:#000000;border:1px solid #00FF00;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#00FF00;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
+    header_html = f'<div class="header-container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;width:100%;"><div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:2.2rem;font-weight:900;letter-spacing:4px;color:#00FF00;">SECUREX COMMAND</h1><p style="color:#FFFFFF;margin:5px 0 0 0;font-size:0.85rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div class="header-metrics" style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;justify-content:center;"><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#00FF00;font-weight:bold;font-size:1.2rem;">{threat_count}</div></div><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">{assets_count:,}</div></div><div style="background:#000000;border:1px solid #00FF00;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#00FF00;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
     st.markdown(header_html, unsafe_allow_html=True)
 
 
@@ -348,7 +349,7 @@ def render_ai_analyst() -> None:
     current_rank = ranks[min(st.session_state.points // 20, len(ranks)-1)]
 
     threat_list = st.session_state.get('threat_log', [])
-    if not threat_list:
+    if not threat_list or not isinstance(threat_list[0], dict):
         st.sidebar.markdown('<div class="analyst-terminal">> SYSTEM SECURE.<br>> NO ACTIVE THREATS.</div>', unsafe_allow_html=True)
         return
 
@@ -357,7 +358,8 @@ def render_ai_analyst() -> None:
     if st.session_state.show_intel:
         intel_text = f"<br><br>> AI CHARLIE: Accessing high-authority intel channels...<br>> - <a href='https://attack.mitre.org/techniques/{latest.get('MITRE','')}/' target='_blank' style='color:#00FF00;'>MITRE: {latest.get('MITRE','')}</a><br>> - <a href='https://nvd.nist.gov/vuln/detail/{latest.get('CVE','')}' target='_blank' style='color:#00FF00;'>NIST: {latest.get('CVE','')}</a>"
     
-    hint_text = f"<br><br>> [HINT]: {latest.get('Hint')}" if st.session_state.show_hint else ""
+    hint_val = latest.get('Hint', 'No tactical hints available for this vector.')
+    hint_text = f"<br><br>> [HINT]: {hint_val}" if st.session_state.show_hint else ""
     error_text = f"<br><br><span style='color:#FF4B4B;'>[ERROR]: {st.session_state.last_error}</span>" if st.session_state.last_error else ""
 
     st.sidebar.markdown(f"""
@@ -366,8 +368,8 @@ def render_ai_analyst() -> None:
         > RANK: {current_rank}<br>
         > SCORE: {st.session_state.points} XP<br>
         -------------------------<br>
-        > 🤖 AI CHARLIE: Commander, {latest.get('Vector')} detected.<br><br>
-        > LOG: "{latest.get('Insight')}"{intel_text}{hint_text}{error_text}<br><br>
+        > 🤖 AI CHARLIE: Commander, {latest.get('Vector', 'Unknown Vector')} detected.<br><br>
+        > LOG: "{latest.get('Insight', 'Analyzing polymorphic behavior...')}"{intel_text}{hint_text}{error_text}<br><br>
         > ADVISORY: Execute remediation protocol.
     </div>
     """, unsafe_allow_html=True)
@@ -385,8 +387,8 @@ def render_ai_analyst() -> None:
                 st.session_state.points += 10
                 st.session_state.threat_log.pop(0)
                 st.session_state.show_intel = False; st.session_state.show_hint = False; st.session_state.last_error = ""
-                steps = "\\n".join(latest.get('Steps', []))
-                st.sidebar.success(f"CORRECT.\\n\\nFIELD STEPS:\\n{steps}")
+                steps = "\n".join(latest.get('Steps', []))
+                st.sidebar.success(f"CORRECT.\n\nFIELD STEPS:\n{steps}")
                 st.rerun()
             else:
                 st.session_state.last_error = latest.get('DistractorExplanations', {}).get(action, "Incorrect protocol selection.")
@@ -402,7 +404,8 @@ def render_pipeline_status() -> None:
 
 
 def main() -> None:
-    # Initialize state (GDPR Compliant: Volatile session telemetry only)
+    # Sovereign Initialization (GDPR Compliant: Volatile session telemetry only)
+    # These MUST stay at the very top of main() to avoid AttributeErrors in the UI
     if 'threat_log' not in st.session_state:
         st.session_state.threat_log = []
     if 'threat_count' not in st.session_state:
@@ -411,6 +414,8 @@ def main() -> None:
         st.session_state.assets_count = 0
     if 'points' not in st.session_state:
         st.session_state.points = 0
+    if 'last_error' not in st.session_state:
+        st.session_state.last_error = ""
 
     with st.sidebar:
         st.markdown("<p style='color: #FFFFFF; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
@@ -435,7 +440,7 @@ def main() -> None:
     active_breach_mode = breach_sim or (latest_critical is not None)
 
     inject_custom_css(breach_active=active_breach_mode)
-    render_header()
+    render_header(st.session_state.get('threat_count', 0), st.session_state.get('assets_count', 0))
 
     # Dynamic Map Zoom based on latest Critical Threat
     map_lat, map_lon = None, None
