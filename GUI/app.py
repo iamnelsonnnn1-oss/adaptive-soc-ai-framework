@@ -130,6 +130,18 @@ def inject_custom_css(breach_active: bool = False) -> None:
             padding: 15px;
             margin-top: 20px; /* Ensure sufficient spacing from other elements */
         }
+
+        /* Research Buttons */
+        .research-btn {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #1A1A1A;
+            border: 1px solid #00FF00;
+            color: #00FF00 !important;
+            text-decoration: none;
+            font-size: 0.7rem;
+            margin-right: 5px;
+        }
         
         /* High-Density Command Metric Containers */
         .pipeline-card {
@@ -395,8 +407,33 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
 @st.dialog("TACTICAL REMEDIATION INTERFACE")
 def remediation_dialog(latest):
     """Drill-down window for incident analysis and playbook execution."""
-    if 'remediation_step' not in st.session_state:
-        st.session_state.remediation_step = 1
+    # Initialize Triage MCQ State
+    if 'triage_passed' not in st.session_state:
+        st.session_state.triage_passed = False
+
+    st.markdown(f"### 🛡️ TRIAGE: {latest.get('Vector')}")
+    
+    # External Research Tools
+    c1, c2 = st.columns(2)
+    vt_link = f"https://www.virustotal.com/gui/search/{latest.get('CVE', latest.get('Vector'))}"
+    abuse_link = f"https://www.abuseipdb.com/check/{latest.get('Source')}"
+    c1.markdown(f'<a href="{vt_link}" target="_blank" class="research-btn">🔍 VirusTotal Search</a>', unsafe_allow_html=True)
+    c2.markdown(f'<a href="{abuse_link}" target="_blank" class="research-btn">🛡️ AbuseIPDB Check</a>', unsafe_allow_html=True)
+    st.write("")
+
+    if not st.session_state.triage_passed:
+        st.write("**Educational Challenge: Identify the first responder action.**")
+        q_options = latest.get('Playbook', [])
+        choice = st.radio("What is the first remediation step for this specific attack?", q_options)
+        
+        if st.button("CONFIRM ACTION"):
+            if choice == latest.get('Correct'):
+                st.success(f"✅ CORRECT: {choice}. This action directly targets the root cause.")
+                st.session_state.triage_passed = True
+                st.rerun()
+            else:
+                st.error(f"❌ INCORRECT: {latest.get('DistractorExplanations', {}).get(choice, 'Protocol violation.')}")
+        return
 
     steps = [
         "1. CONTAINMENT: Isolate affected systems",
@@ -430,6 +467,7 @@ def remediation_dialog(latest):
                 if action == latest.get('Correct'):
                     # Correct Playbook Selection: Progress to Step 8 (Case Profile)
                     st.session_state.active_case = latest.copy()
+                    st.session_state.triage_passed = False
                     st.session_state.remediation_target = None
                     st.session_state.remediation_step = 1
                     st.rerun()
@@ -437,6 +475,7 @@ def remediation_dialog(latest):
                     st.error(f"MISSION FAILED: {latest.get('DistractorExplanations', {}).get(action, 'Incorrect protocol.')}")
 
     if st.button("Cancel Operation", use_container_width=True):
+        st.session_state.triage_passed = False
         st.session_state.remediation_target = None
         st.session_state.remediation_step = 1
         st.rerun()
@@ -512,17 +551,44 @@ def ask_ai_charlie(query, threat_context=None):
     except Exception as e: return f"Neural Link Error: {str(e)}"
 
 
+def render_user_profile() -> None:
+    """Handles user signup, login, and progress tracking."""
+    if 'user_profile' not in st.session_state:
+        st.session_state.user_profile = None
+
+    if not st.session_state.user_profile:
+        with st.sidebar.expander("🔐 COMMANDER SIGNUP / LOGIN", expanded=True):
+            username = st.text_input("Username")
+            track = st.selectbox("Select Learning Track", ["SOC Analyst L1", "Network Defender", "Threat Hunter"])
+            if st.button("INITIALIZE PROFILE"):
+                st.session_state.user_profile = {
+                    "username": username,
+                    "track": track,
+                    "xp": 0,
+                    "completed_cases": 0,
+                    "started_at": datetime.now().strftime("%Y-%m-%d")
+                }
+                st.rerun()
+        return
+
+    prof = st.session_state.user_profile
+    st.sidebar.markdown(f"""
+        <div style="border: 1px solid #00FF00; padding: 10px; background: rgba(0,255,0,0.05); margin-bottom: 20px;">
+            <b style="color:#00FF00;">OFFICER: {prof['username'].upper()}</b><br>
+            <span style="font-size:0.7rem;">TRACK: {prof['track']}</span><br>
+            <span style="font-size:0.7rem;">ENLISTED: {prof['started_at']}</span>
+        </div>
+    """, unsafe_allow_html=True)
+
+
 def render_ai_analyst() -> None:
     ranks = [
-        "◈ SENTINEL INITIATE (L1)", 
-        "◆ VECTOR OPERATOR (L2)", 
-        "❖ PROTOCOL ANALYST (L3)", 
-        "⌘ CORE RESPONDER (PRO)", 
-        "⫸ INCIDENT COMMANDER (EXPERT)", 
-        "⌬ SYSTEMS ARCHITECT (MASTER)", 
+        "◈ SENTINEL INITIATE (L1)", "◆ VECTOR OPERATOR (L2)", 
+        "❖ PROTOCOL ANALYST (L3)", "⌘ CORE RESPONDER (PRO)", 
+        "⫸ INCIDENT COMMANDER (EXPERT)", "⌬ SYSTEMS ARCHITECT (MASTER)", 
         "🌐 DIGITAL SOVEREIGN (SME)"
     ]
-    points = st.session_state.get('points', 0)
+    points = st.session_state.get('points', 0) + (st.session_state.user_profile['xp'] if st.session_state.user_profile else 0)
     current_rank = ranks[min(points // 20, len(ranks)-1)]
 
     threat_list = st.session_state.get('threat_log', [])
@@ -548,10 +614,15 @@ def render_ai_analyst() -> None:
     hint_text = f"<br><br>> [HINT]: {latest.get('Hint')}" if st.session_state.show_hint else ""
     error_text = f"<br><br><span style='color:#FF4B4B;'>[ERROR]: {st.session_state.last_error}</span>" if st.session_state.last_error else ""
 
+    # Neural Link Status
+    api_key = st.session_state.get('gemini_api_key') or st.secrets.get("GEMINI_API_KEY")
+    link_status = "<span style='color:#00FF00;'>ONLINE</span>" if api_key else "<span style='color:#FF4B4B;'>OFFLINE (MISSING KEY)</span>"
+
     st.sidebar.markdown(f"""
     <div class="analyst-terminal">
         > ACCESSING AI CHARLIE ANALYST...<br>
         > RANK: {current_rank}<br>
+        > NEURAL LINK: {link_status}<br>
         > SCORE: {st.session_state.points} XP<br>
         -------------------------<br>
         > 🤖 AI CHARLIE: Commander, {latest.get('Vector', 'Unknown Vector')} detected.<br><br>
@@ -575,7 +646,7 @@ def render_ai_analyst() -> None:
             st.session_state.chat_history.append({"user": query, "ai": ai_resp})
             st.session_state.ai_chat_input = "" # Clear the input
 
-    st.sidebar.text_input("Ask Charlie for help:", key="ai_chat_input", on_change=handle_chat)
+    st.sidebar.text_input("Neural Link Command:", key="ai_chat_input", on_change=handle_chat, placeholder="Ask Charlie for triage help...")
 
     c1, c2 = st.sidebar.columns(2)
     if c1.button("📡 INTEL", key="intel_btn", use_container_width=True):
@@ -751,6 +822,8 @@ def main() -> None:
 
     inject_custom_css(breach_active=active_breach_mode)
     render_header(st.session_state.threat_count, st.session_state.assets_count)
+
+    render_user_profile()
 
     # SIEM Intelligence Window Overlay
     if st.session_state.get('show_intel_feed') and threat_list:
