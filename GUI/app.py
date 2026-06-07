@@ -720,6 +720,8 @@ def render_incident_ledger() -> None:
         row_cols[4].markdown(f"<span style='color: #777777; font-size: 0.75rem; font-family: monospace;'>{t.get('MITRE')}</span>", unsafe_allow_html=True)
         
         if row_cols[5].button("OPEN", key=f"ledger_btn_{t.get('ID')}", use_container_width=True):
+            st.session_state.remediation_target = t
+            st.rerun()
 
 
 def render_risk_dashboard() -> None:
