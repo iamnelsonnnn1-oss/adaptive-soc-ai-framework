@@ -8,6 +8,7 @@ import json
 from urllib.request import urlopen
 from datetime import datetime
 import time
+import google.generativeai as genai
 
 
 st.set_page_config(
@@ -342,11 +343,30 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     st.pydeck_chart(r)
 
 
+def ask_ai_charlie(query, threat_context=None):
+    try:
+        api_key = st.secrets.get("GEMINI_API_KEY")
+        if not api_key:
+            return "AI Charlie's neural link is offline. (Missing API Key)"
+        
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        context_prompt = f"You are AI Charlie, an expert SOC Analyst mentor. Help the student understand this security event: {threat_context}. " if threat_context else "You are AI Charlie, a SOC mentor."
+        full_prompt = f"{context_prompt} User asks: {query}. Keep it tactical, technical, and educational. Reference MITRE or NIST if applicable."
+        
+        response = model.generate_content(full_prompt)
+        return response.text
+    except Exception as e:
+        return f"Neural Link Error: {str(e)}"
+
+
 def render_ai_analyst() -> None:
     if 'points' not in st.session_state: st.session_state.points = 0
     if 'show_intel' not in st.session_state: st.session_state.show_intel = False
     if 'show_hint' not in st.session_state: st.session_state.show_hint = False
     if 'last_error' not in st.session_state: st.session_state.last_error = ""
+    if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 
     ranks = [
         "TIER 1 (ASSOCIATE ANALYST)", 
@@ -369,8 +389,12 @@ def render_ai_analyst() -> None:
     if st.session_state.show_intel:
         intel_text = f"<br><br>> AI CHARLIE: Accessing high-authority intel channels...<br>> - <a href='https://attack.mitre.org/techniques/{latest.get('MITRE','')}/' target='_blank' style='color:#00FF00;'>MITRE: {latest.get('MITRE','')}</a><br>> - <a href='https://nvd.nist.gov/vuln/detail/{latest.get('CVE','')}' target='_blank' style='color:#00FF00;'>NIST: {latest.get('CVE','')}</a>"
     
-    hint_val = latest.get('Hint', 'No tactical hints available for this vector.')
-    hint_text = f"<br><br>> [HINT]: {hint_val}" if st.session_state.show_hint else ""
+    # Manage chat window inside terminal
+    chat_display = ""
+    for chat in st.session_state.chat_history[-2:]: # Show last 2 exchanges
+        chat_display += f"<br>> 👤 Student: {chat['user']}<br>> 🤖 Charlie: {chat['ai']}<br>"
+
+    hint_text = f"<br><br>> [HINT]: {latest.get('Hint')}" if st.session_state.show_hint else ""
     error_text = f"<br><br><span style='color:#FF4B4B;'>[ERROR]: {st.session_state.last_error}</span>" if st.session_state.last_error else ""
 
     st.sidebar.markdown(f"""
@@ -380,10 +404,19 @@ def render_ai_analyst() -> None:
         > SCORE: {st.session_state.points} XP<br>
         -------------------------<br>
         > 🤖 AI CHARLIE: Commander, {latest.get('Vector', 'Unknown Vector')} detected.<br><br>
-        > LOG: "{latest.get('Insight', 'Analyzing polymorphic behavior...')}"{intel_text}{hint_text}{error_text}<br><br>
-        > ADVISORY: Execute remediation protocol.
+        > LOG: "{latest.get('Insight')}"{intel_text}{hint_text}{error_text}{chat_display}<br><br>
+        > ADVISORY: Ask me anything or execute protocol.
     </div>
     """, unsafe_allow_html=True)
+
+    # Student Chat Input
+    user_query = st.sidebar.text_input("Ask Charlie for help:", key="ai_chat_input")
+    if user_query:
+        with st.sidebar:
+            with st.spinner("Analyzing..."):
+                ai_resp = ask_ai_charlie(user_query, latest.get('Vector'))
+                st.session_state.chat_history.append({"user": user_query, "ai": ai_resp})
+                st.rerun()
 
     c1, c2 = st.sidebar.columns(2)
     if c1.button("📡 INTEL", key="intel_btn", use_container_width=True):
@@ -407,6 +440,44 @@ def render_ai_analyst() -> None:
                 st.rerun()
 
 
+def render_incident_ledger() -> None:
+    st.markdown("<p style='color: #FFFFFF; margin: 30px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// MASTER INCIDENT LEDGER</p>", unsafe_allow_html=True)
+    threat_list = st.session_state.get('threat_log', [])
+    
+    if not threat_list:
+        st.markdown("<p style='color: #444444; font-size: 0.8rem; font-family: monospace;'>[SYSTEM MESSAGE]: LEDGER EMPTY. NO CURRENT INCIDENTS RECORDED.</p>", unsafe_allow_html=True)
+        return
+
+    table_rows = ""
+    for t in threat_list:
+        color = "#444444"
+        sev = t.get("Severity", "Low")
+        if sev == "Critical": color = "#00FF00"
+        elif sev == "High": color = "#FFFFFF"
+        elif sev == "Medium": color = "#777777"
+
+        table_rows += f"""
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); font-family: monospace;">
+            <td style="padding: 12px; color: #777777;">{t.get('Time')}</td>
+            <td style="padding: 12px; font-weight: bold; color: {color};">{sev.upper()}</td>
+            <td style="padding: 12px; color: #FFFFFF;">{t.get('ID')}</td>
+            <td style="padding: 12px; color: #FFFFFF;">{t.get('Vector')}</td>
+            <td style="padding: 12px; color: #777777;">{t.get('MITRE')}</td>
+            <td style="padding: 12px; color: #00FF00; font-weight: bold;">{t.get('Status')}</td>
+        </tr>"""
+
+    ledger_html = f"""
+    <div style="background: rgba(10, 15, 24, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; width: 100%; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;">
+            <thead style="background: rgba(0, 255, 0, 0.03); border-bottom: 1px solid rgba(0, 255, 0, 0.2);">
+                <tr><th style="padding: 12px; color: #00FF00;">TIMESTAMP</th><th style="padding: 12px; color: #00FF00;">SEVERITY</th><th style="padding: 12px; color: #00FF00;">INCIDENT_ID</th><th style="padding: 12px; color: #00FF00;">ATTACK_VECTOR</th><th style="padding: 12px; color: #00FF00;">MITRE_REF</th><th style="padding: 12px; color: #00FF00;">OPS_STATUS</th></tr>
+            </thead>
+            <tbody>{table_rows}</tbody>
+        </table>
+    </div>"""
+    st.markdown(ledger_html, unsafe_allow_html=True)
+
+
 def render_pipeline_status() -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// AUTOMATION HEALTH</p>", unsafe_allow_html=True)
     pipelines = get_pipeline_status_data()
@@ -426,6 +497,8 @@ def main() -> None:
         st.session_state.assets_count = 0
     if 'points' not in st.session_state:
         st.session_state.points = 0
+    if 'prev_rank_idx' not in st.session_state:
+        st.session_state.prev_rank_idx = 0
     if 'last_error' not in st.session_state:
         st.session_state.last_error = ""
     if 'last_auto_injection' not in st.session_state:
@@ -512,6 +585,7 @@ def main() -> None:
     st.divider()
     render_system_health()
     render_ai_analyst()
+    render_incident_ledger()
 
     # Heartbeat: Tick every second if breach simulation is active
     if breach_sim:
