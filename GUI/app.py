@@ -151,6 +151,14 @@ def inject_custom_css(breach_active: bool = False) -> None:
             letter-spacing: 1px !important;
             text-transform: uppercase !important;
         }
+        /* Mobile Responsive Engine */
+        @media (max-width: 768px) {
+            .header-container { flex-direction: column !important; align-items: center !important; text-align: center !important; gap: 20px !important; }
+            .logo-img { margin-right: 0 !important; margin-bottom: 10px !important; height: 80px !important; }
+            .header-metrics { flex-direction: column !important; gap: 15px !important; align-items: center !important; }
+            .ai-content-wrapper { flex-direction: column !important; gap: 15px !important; }
+            .risk-score-box { width: 100% !important; border-left: none !important; border-top: 1px solid #1A1A1A !important; padding: 15px 0 0 0 !important; }
+        }
         /* Breach Simulation Overlay */
         """ + alert_style + """
         """ + ai_breach_style + """
@@ -201,9 +209,9 @@ def render_header() -> None:
     if os.path.exists(logo_path):
         with open(logo_path, "rb") as f:
             logo_b64 = base64.b64encode(f.read()).decode()
-            logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="height:150px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">'
+            logo_html = f'<img class="logo-img" src="data:image/png;base64,{logo_b64}" style="height:150px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">'
     
-    header_html = f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;"><div style="display:flex;align-items:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:2.2rem;font-weight:900;letter-spacing:4px;color:#00FF00;">SECUREX COMMAND</h1><p style="color:#FFFFFF;margin:5px 0 0 0;font-size:0.85rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div style="display:flex;gap:40px;align-items:center;"><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#00FF00;font-weight:bold;font-size:1.2rem;">17</div></div><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">2,491</div></div><div style="background:#000000;border:1px solid #00FF00;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#00FF00;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
+    header_html = f'<div class="header-container" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;"><div style="display:flex;align-items:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:2.2rem;font-weight:900;letter-spacing:4px;color:#00FF00;">SECUREX COMMAND</h1><p style="color:#FFFFFF;margin:5px 0 0 0;font-size:0.85rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div class="header-metrics" style="display:flex;gap:40px;align-items:center;"><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#00FF00;font-weight:bold;font-size:1.2rem;">17</div></div><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">2,491</div></div><div style="background:#000000;border:1px solid #00FF00;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#00FF00;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
     st.markdown(header_html, unsafe_allow_html=True)
 
 
@@ -268,7 +276,7 @@ def render_anomaly_map() -> None:
 
 
 def render_ai_analyst() -> None:
-    ai_html = '<div class="ai-analyst-box"><div style="color:#00FF00;font-weight:bold;font-size:0.9rem;margin-bottom:10px;">🤖 AI CHARLIE SOC ANALYST</div><div style="display:flex;gap:30px;"><div style="flex:1;"><p style="color:#FFFFFF;font-size:0.85rem;line-height:1.6;">"Behavioral anomaly detected from Kubernetes worker node 3. Cross-referencing with network logs indicates potential data staging in unauthorized S3 bucket."</p></div><div style="width:200px;border-left:1px solid #1A1A1A;padding-left:20px;"><div style="color:#FFFFFF;font-size:0.65rem;">RISK SCORE</div><div style="color:#00FF00;font-size:1.5rem;font-weight:bold;">82/100</div><div style="margin-top:10px;color:#FFFFFF;font-size:0.7rem;font-weight:bold;">RECOMMENDATION:<br><span style="color:#FFFFFF;font-weight:normal;">Isolate Node 3 & Block egress to bucket audit-exfil-demo.</span></div></div></div></div>'
+    ai_html = '<div class="ai-analyst-box"><div style="color:#00FF00;font-weight:bold;font-size:0.9rem;margin-bottom:10px;">🤖 AI CHARLIE SOC ANALYST</div><div class="ai-content-wrapper" style="display:flex;gap:30px;"><div style="flex:1;"><p style="color:#FFFFFF;font-size:0.85rem;line-height:1.6;">"Behavioral anomaly detected from Kubernetes worker node 3. Cross-referencing with network logs indicates potential data staging in unauthorized S3 bucket."</p></div><div class="risk-score-box" style="width:200px;border-left:1px solid #1A1A1A;padding-left:20px;"><div style="color:#FFFFFF;font-size:0.65rem;">RISK SCORE</div><div style="color:#00FF00;font-size:1.5rem;font-weight:bold;">82/100</div><div style="margin-top:10px;color:#FFFFFF;font-size:0.7rem;font-weight:bold;">RECOMMENDATION:<br><span style="color:#FFFFFF;font-weight:normal;">Isolate Node 3 & Block egress to bucket audit-exfil-demo.</span></div></div></div></div>'
     st.markdown(ai_html, unsafe_allow_html=True)
 
 
