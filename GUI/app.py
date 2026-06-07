@@ -346,7 +346,15 @@ def render_ai_analyst() -> None:
     if 'show_hint' not in st.session_state: st.session_state.show_hint = False
     if 'last_error' not in st.session_state: st.session_state.last_error = ""
 
-    ranks = ["PRIVATE", "COMMANDER 1", "COMMANDER 2", "COMMANDER 3", "COMMANDER 4", "COMMANDER 5", "COMMANDER 6", "COMMANDER 7", "OFFICERS CLUB"]
+    ranks = [
+        "TIER 1 (ASSOCIATE ANALYST)", 
+        "TIER 2 (INCIDENT RESPONDER)", 
+        "TIER 3 (SENIOR INVESTIGATOR)", 
+        "THREAT HUNTER (PROFESSIONAL)", 
+        "INCIDENT COMMANDER (EXPERT)", 
+        "SOC ARCHITECT (MASTER)", 
+        "OFFICERS CLUB (SME)"
+    ]
     current_rank = ranks[min(st.session_state.points // 20, len(ranks)-1)]
 
     threat_list = st.session_state.get('threat_log', [])
@@ -427,18 +435,17 @@ def main() -> None:
         st.markdown("<p style='color: #FFFFFF; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
         breach_sim = st.toggle("SIMULATE SYSTEM BREACH", value=False)
 
-        # Automated Simulation Engine
+        # Real-Time Countdown Engine
         if breach_sim:
             current_time = time.time()
             elapsed = current_time - st.session_state.last_auto_injection
-            remaining = max(0, int(300 - elapsed))
+            remaining = max(0, int(60 - elapsed)) # Set to 60s for higher training intensity
             mins, secs = divmod(remaining, 60)
             
             countdown_html = f'<div style="border:1px solid #00FF00;padding:10px;margin-bottom:20px;text-align:center;background:rgba(0,255,0,0.05);"><span style="color:#00FF00;font-size:0.65rem;letter-spacing:1px;">T-MINUS NEXT BREACH</span><br><span style="color:#FFFFFF;font-size:1.4rem;font-family:monospace;">{mins:02d}:{secs:02d}</span></div>'
             st.markdown(countdown_html, unsafe_allow_html=True)
 
-            # Automated injection interval: 300s (5 mins)
-            if elapsed > 300:
+            if elapsed >= 60:
                 new_threat = random.choice(get_active_threats_data().to_dict('records')).copy()
                 new_threat["ID"] = f"TR-AUTO-{random.randint(1000, 9999)}"
                 new_threat["Time"] = datetime.now().strftime("%H:%M:%S")
@@ -492,6 +499,11 @@ def main() -> None:
     st.divider()
     render_system_health()
     render_ai_analyst()
+
+    # Heartbeat: Tick every second if breach simulation is active
+    if breach_sim:
+        time.sleep(1)
+        st.rerun()
 
 
 if __name__ == "__main__":
