@@ -230,9 +230,9 @@ def inject_custom_css(breach_active: bool = False) -> None:
         .research-btn {
             display: inline-block;
             padding: 5px 10px;
-            background: #1A1A1A;
+            background: #FFFFFF;
             border: 1px solid #00FF00;
-            color: #00FF00 !important;
+            color: #000000 !important;
             text-decoration: none;
             font-size: 0.7rem;
             margin-right: 5px;
@@ -287,6 +287,25 @@ def inject_custom_css(breach_active: bool = False) -> None:
             .stMetric { width: 100% !important; }
             .map-container { height: 400px !important; }
         }
+        /* Button and Option Visibility Hardening */
+        div.stButton > button, div[data-testid="stRadio"] label {
+            background-color: #FFFFFF !important;
+            color: #000000 !important;
+            border: 1px solid #00FF00 !important;
+            font-weight: bold !important;
+        }
+        div.stButton > button:hover, div[data-testid="stRadio"] label:hover {
+            background-color: #00FF00 !important;
+            color: #000000 !important;
+            cursor: pointer;
+        }
+        /* High-Contrast Input Visibility */
+        div[data-testid="stTextInput"] input, div[data-testid="stTextArea"] textarea {
+            background-color: #FFFFFF !important;
+            color: #000000 !important;
+            border: 1px solid #00FF00 !important;
+            font-family: 'Courier New', monospace !important;
+        }
         """ + alert_style + """
         """ + ai_breach_style + """
         """ + map_flash + """
@@ -306,7 +325,7 @@ def get_ai_engine_metrics() -> dict:
 def get_active_threats_data() -> pd.DataFrame:
     local_data = []
     
-    # Attempt to fetch from AWS S3 if credentials exist
+    # S3 Telemetry Ingestion Logic
     if "AWS_ACCESS_KEY_ID" in st.secrets:
         try:
             s3 = boto3.client(
@@ -503,7 +522,7 @@ def remediation_dialog(latest):
         if st.button("CONFIRM PROTOCOL", use_container_width=True):
             if choice == challenge['correct']:
                 st.success(f"**CORRECT:** {challenge['exp']}")
-                time.sleep(1)
+                time.sleep(0.5)
                 st.session_state.remediation_step += 1
                 st.rerun()
             else:
@@ -594,6 +613,10 @@ def ask_ai_charlie(query, threat_context=None):
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"You are AI Charlie, an expert SOC mentor. Incident: {threat_context}. Student asks: {query}. Keep it technical."
+        
+        # Verification: Log prompt to console for developer audit
+        print(f"[DEBUG] AI Prompt Sent: {prompt}")
+        
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -720,7 +743,11 @@ def render_ai_analyst() -> None:
     def handle_chat():
         query = st.session_state.ai_chat_input
         if query:
-            ai_resp = ask_ai_charlie(query, latest.get('Vector') if latest else None)
+            # Build enriched context including Forensic Workbench data
+            forensics = latest.get('Forensics', {})
+            enriched_context = f"Vector: {latest.get('Vector')}, Evidence: {json.dumps(forensics)}"
+            
+            ai_resp = ask_ai_charlie(query, enriched_context)
             st.session_state.chat_history.append({"user": query, "ai": ai_resp})
             st.session_state.ai_chat_input = ""
 
