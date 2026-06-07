@@ -186,13 +186,50 @@ def get_system_health_data() -> dict:
 
 
 def get_active_threats_data() -> pd.DataFrame:
+    # Protocol: Check for local telemetry file ingestion
+    telemetry_path = os.path.join(os.path.dirname(__file__), "telemetry.json")
+    local_data = []
+    if os.path.exists(telemetry_path):
+        try:
+            with open(telemetry_path, "r") as f:
+                local_data = json.load(f)
+        except Exception:
+            pass
+
     threat_pool = [
-        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Correct": "Patch Log4j", "Insight": "Polymorphic payload detected. Obfuscated ${jndi:ldap} strings observed."},
-        {"ID": "TR-1082", "Severity": "High", "Source": "EDR-Core", "Vector": "PwnKit Escalation", "Status": "Active", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034", "Playbook": ["Remove SUID bit", "Patch Polkit", "Isolate Host"], "Correct": "Patch Polkit", "Insight": "Metamorphic exploit: binary signature cycling detected in runtime."},
-        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Sensor", "Vector": "runc Escape", "Status": "Active", "lat": 52.5200, "lon": 13.4050, "MITRE": "T1611", "CVE": "CVE-2024-21626", "Playbook": ["Update Runc", "ReadOnly RootFS", "Pod Security Policy"], "Correct": "Update Runc", "Insight": "Container escape via runc descriptor. Possible lateral movement."},
-        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", "Playbook": ["Disable SFTP", "Rotate DB Keys", "IP Blocklist"], "Correct": "IP Blocklist", "Insight": "Zero-day SQL injection in progress. Data exfiltration detected."},
-        {"ID": "TR-1085", "Severity": "High", "Source": "Falcon-X", "Vector": "PaperCut RCE", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1210", "CVE": "CVE-2023-27350", "Playbook": ["Update Server", "Firewall Port 9191", "Kill Java Process"], "Correct": "Update Server", "Insight": "Setup-mode bypass RCE. Metamorphic shellcode in memory."},
-        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Active", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966", "Playbook": ["Clear Sessions", "Update NetScaler", "Kill Active VPN"], "Correct": "Update NetScaler", "Insight": "Session hijacking without credentials. Active token theft."}
+        {
+            "ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", 
+            "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Correct": "Patch Log4j", 
+            "DistractorExplanations": {
+                "Disable JNDI": "Suboptimal. While it reduces surface area, the vulnerable library remains on disk and can be re-enabled.",
+                "WAF Filter": "Ineffective. Polymorphic payloads use nesting like ${${lower:j}ndi} to bypass static WAF strings."
+            },
+            "Hint": "Look for the most permanent remediation that targets the library version itself.",
+            "Steps": ["1. Identify all JAR files using Log4j < 2.17", "2. Update dependencies to latest patch", "3. Restart JVM instances."],
+            "Insight": "Polymorphic payload detected. Obfuscated ${jndi:ldap} strings observed."
+        },
+        {
+            "ID": "TR-1082", "Severity": "High", "Source": "EDR-Core", "Vector": "PwnKit Escalation", "Status": "Active", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034", 
+            "Playbook": ["Remove SUID bit", "Patch Polkit", "Isolate Host"], "Correct": "Patch Polkit",
+            "DistractorExplanations": {
+                "Remove SUID bit": "Tactically sound but fragile. A system update might restore the bit, re-opening the hole.",
+                "Isolate Host": "Overkill for a local privilege escalation if the workload is critical and patchable."
+            },
+            "Hint": "SUID bit removal is a temporary fix; what is the vendor-recommended path?",
+            "Steps": ["1. Check polkit version", "2. Execute 'apt upgrade polkit'", "3. Verify pkexec permissions."],
+            "Insight": "Metamorphic exploit: binary signature cycling detected in runtime."
+        },
+        {
+            "ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Sensor", "Vector": "runc Escape", "Status": "Active", "lat": 52.5200, "lon": 13.4050, "MITRE": "T1611", "CVE": "CVE-2024-21626", 
+            "Playbook": ["Update Runc", "ReadOnly RootFS", "Pod Security Policy"], "Correct": "Update Runc",
+            "DistractorExplanations": {
+                "ReadOnly RootFS": "Bypassable. An escape via file descriptor can still allow interaction with the host.",
+                "Pod Security Policy": "Admission controls don't fix a vulnerability already running in a container."
+            },
+            "Hint": "This is a core container runtime vulnerability. Focus on the engine.",
+            "Steps": ["1. Drain affected K8s node", "2. Update libcontainer/runc package", "3. Un-drain and verify runtime."],
+            "Insight": "Container escape via runc descriptor. Possible lateral movement."
+        }
     ]
     
     if 'threat_log' not in st.session_state:
@@ -326,7 +363,7 @@ def render_ai_analyst() -> None:
     if st.session_state.show_intel:
         intel_guidance = f"""
         <br><br>
-        > 🤖 AI CHARLIE: Intelligence required? Understood.<br>
+        > 🤖 AI CHARLIE ANALYST: Intelligence required? Understood.<br>
         > RECOMMENDED CHANNELS:<br>
         > - <a href="https://attack.mitre.org/techniques/{latest['MITRE']}/" target="_blank" style="color:#00FF00;">MITRE ATT&CK: {latest['MITRE']}</a><br>
         > - <a href="https://nvd.nist.gov/vuln/detail/{latest['CVE']}" target="_blank" style="color:#00FF00;">NVD DETAILS: {latest['CVE']}</a><br>
@@ -336,31 +373,34 @@ def render_ai_analyst() -> None:
 
     st.sidebar.markdown(f"""
     <div class="analyst-terminal">
-        > ACCESSING CO-PILOT...<br>
+        > ACCESSING AI CHARLIE ANALYST...<br>
         > RANK: {current_rank}<br>
         > SCORE: {st.session_state.points} XP<br>
         -------------------------<br>
-        > 🤖 AI CHARLIE: Commander, we have a breach! {latest.get('Vector', 'Unknown')} detected.<br><br>
-        > LOG: "{latest.get('Insight', 'Metadata unavailable for this vector.')}"{intel_guidance}<br>
-        > ADVISORY: Which playbook protocol should we initiate? 
+        > 🤖 AI CHARLIE ANALYST: Commander, we have a breach! {latest.get('Vector', 'Unknown')} detected.<br><br>
+        > LOG: "{latest.get('Insight', 'Metadata unavailable for this vector.')}"{intel_guidance}{hint_text}{error_text}<br><br>
+        > ADVISORY: Which playbook protocol should we initiate?
     </div>
     """, unsafe_allow_html=True)
 
-    if st.sidebar.button("HELP: REQUEST FIELD INTEL", key="intel_btn"):
-        st.session_state.show_intel = not st.session_state.show_intel
-        st.rerun()
+    col_h1, col_h2 = st.sidebar.columns(2)
+    if col_h1.button("📡 INTEL", key="intel_btn", use_container_width=True):
+        st.session_state.show_intel = not st.session_state.show_intel; st.rerun()
+    if col_h2.button("💡 HINT", key="hint_btn", use_container_width=True):
+        st.session_state.show_hint = not st.session_state.show_hint; st.rerun()
 
     for action in latest.get('Playbook', []):
         if st.sidebar.button(f"EXECUTE: {action}", key=f"play_{latest['ID']}_{action}"):
             if action == latest.get('Correct'):
                 st.balloons()
-                st.session_state.points += 10
-                st.session_state.threat_log.pop(0)
-                st.session_state.show_intel = False # Reset for next threat
-                st.sidebar.success("TACTICAL SUCCESS! XP GAINED.")
+                st.session_state.points += 10; st.session_state.threat_log.pop(0)
+                st.session_state.show_intel = False; st.session_state.show_hint = False; st.session_state.last_error = ""
+                steps_fmt = "\\n".join(latest.get('Steps', []))
+                st.sidebar.success(f"CORRECT. OPERATION COMPLETE.\\n\\nFIELD STEPS:\\n{steps_fmt}")
                 st.rerun()
             else:
-                st.sidebar.error("MISSION FAILED: WRONG PROTOCOL. TRY AGAIN.")
+                st.session_state.last_error = latest.get('DistractorExplanations', {}).get(action, "Incorrect protocol selection.")
+                st.rerun()
 
 
 def render_pipeline_status() -> None:
@@ -372,15 +412,12 @@ def render_pipeline_status() -> None:
 
 
 def main() -> None:
-    # Initialize simulation state (GDPR Compliant: Volatile session telemetry only)
     if 'threat_log' not in st.session_state:
         st.session_state.threat_log = []
     if 'threat_count' not in st.session_state:
         st.session_state.threat_count = 0
     if 'assets_count' not in st.session_state:
         st.session_state.assets_count = 0
-    if 'points' not in st.session_state:
-        st.session_state.points = 0
 
     with st.sidebar:
         render_ai_analyst()
@@ -394,7 +431,7 @@ def main() -> None:
             # Prepend to keep latest on top
             st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
             st.session_state.threat_count += 1
-            st.session_state.assets_count += random.randint(5, 50)
+            st.session_state.assets_count += random.randint(1, 5)
             st.rerun()
 
     # TACTICAL ENGINE
@@ -403,11 +440,11 @@ def main() -> None:
     active_breach_mode = breach_sim or (latest_critical is not None)
 
     inject_custom_css(breach_active=active_breach_mode)
-    render_header(st.session_state.threat_count, st.session_state.assets_count)
+    render_header(st.session_state.get('threat_count', 0), st.session_state.get('assets_count', 0))
     
     map_lat, map_lon = None, None
-    if active_breach_mode and latest_critical:
-        map_lat, map_lon = latest_critical['lat'], latest_critical['lon']
+    if threat_list and len(threat_list) > 0:
+        map_lat, map_lon = threat_list[0]['lat'], threat_list[0]['lon']
 
     # Main Command Deck
     col_left, col_center, col_right = st.columns([1.2, 4, 1.2])
