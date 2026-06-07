@@ -7,6 +7,7 @@ import pydeck as pdk
 import json
 from urllib.request import urlopen
 from datetime import datetime
+import time
 
 
 st.set_page_config(
@@ -417,11 +418,31 @@ def main() -> None:
         st.session_state.points = 0
     if 'last_error' not in st.session_state:
         st.session_state.last_error = ""
+    if 'last_auto_injection' not in st.session_state:
+        st.session_state.last_auto_injection = time.time()
+    if 'show_intel_feed' not in st.session_state:
+        st.session_state.show_intel_feed = False
 
     with st.sidebar:
         st.markdown("<p style='color: #FFFFFF; font-size: 0.7rem; letter-spacing: 1px;'>// TACTICAL SIMULATION</p>", unsafe_allow_html=True)
         breach_sim = st.toggle("SIMULATE SYSTEM BREACH", value=False)
-        
+
+        # Automated Simulation Engine
+        if breach_sim:
+            current_time = time.time()
+            # Automated injection interval: 300s (5 mins). Set to 15s for demo visibility if preferred.
+            if current_time - st.session_state.last_auto_injection > 300:
+                new_threat = random.choice(get_active_threats_data().to_dict('records')).copy()
+                new_threat["ID"] = f"TR-AUTO-{random.randint(1000, 9999)}"
+                new_threat["Time"] = datetime.now().strftime("%H:%M:%S")
+                st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
+                st.session_state.threat_count += 1
+                st.session_state.assets_count += random.randint(10, 100)
+                st.session_state.last_auto_injection = current_time
+                st.rerun()
+
+        st.session_state.show_intel_feed = st.checkbox("OPEN SIEM INTELLIGENCE FEED", value=st.session_state.show_intel_feed)
+
         if st.button("INJECT DETECTION EVENT"):
             new_threat = random.choice(get_active_threats_data().to_dict('records')).copy()
             new_threat["ID"] = f"TR-{random.randint(2000, 9999)}"
