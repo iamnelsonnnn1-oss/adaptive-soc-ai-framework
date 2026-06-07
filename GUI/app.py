@@ -17,8 +17,8 @@ st.set_page_config(
 
 
 def inject_custom_css(breach_active: bool = False) -> None:
-    alert_style = '.stApp { animation: alert-flash 2s infinite !important; } @keyframes alert-flash { 0%, 100% { background-color: #000000; } 50% { background-color: #001a00; } }' if breach_active else ''
-    ai_breach_style = '.ai-analyst-box { border-left: 4px solid #00FF00 !important; border: 1px solid #00FF00 !important; box-shadow: 0 0 15px rgba(0, 255, 0, 0.4) !important; }' if breach_active else ''
+    alert_style = '.stApp { animation: alert-flash 1.5s infinite !important; } @keyframes alert-flash { 0%, 100% { background-color: #000000; } 50% { background-color: #051a05; } }' if breach_active else ''
+    ai_breach_style = '.ai-analyst-box { border: 2px solid #00FF00 !important; box-shadow: 0 0 30px rgba(0, 255, 0, 0.2) !important; transform: scale(1.01); transition: all 0.5s ease; }' if breach_active else ''
     spin_speed = "5s" if breach_active else "20s"
     st.markdown("""
         <style>
@@ -72,7 +72,7 @@ def inject_custom_css(breach_active: bool = False) -> None:
         }
 
         /* Kinetic Globe Projection Control */
-        .globe-texture { 
+        .globe-texture-svg { 
             animation: globe-spin """ + spin_speed + """ linear infinite !important; 
             opacity: 0.4; 
         }
@@ -105,7 +105,7 @@ def inject_custom_css(breach_active: bool = False) -> None:
             background: rgba(10, 15, 24, 0.8);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(0, 255, 0, 0.1);
-            border-left: 4px solid #00FF00;
+            border-left: 4px solid #00FF00 !important;
             padding: 15px;
             margin-top: 20px; /* Ensure sufficient spacing from other elements */
         }
@@ -174,33 +174,17 @@ def get_system_health_data() -> dict:
 
 
 def get_active_threats_data() -> pd.DataFrame:
-    # Protocol: Check for local telemetry file ingestion
-    telemetry_path = os.path.join(os.path.dirname(__file__), "telemetry.json")
-    local_data = []
-    if os.path.exists(telemetry_path):
-        try:
-            with open(telemetry_path, "r") as f:
-                local_data = json.load(f)
-        except Exception:
-            pass
-
     threat_pool = [
-        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Insight": "Polymorphic payload detected. Attackers are obfuscating ${jndi:ldap} strings to bypass WAF."},
-        {"ID": "TR-1082", "Severity": "High", "Source": "Core Defense", "Vector": "PwnKit Escalation", "Status": "Active", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034", "Playbook": ["Remove SUID bit", "Update Polkit", "Isolate Host"], "Insight": "Metamorphic exploit attempt. The binary signature changes every execution to evade EDR."},
-        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Linter", "Vector": "runc Escape", "Status": "Active", "lat": 52.5200, "lon": 13.4050, "MITRE": "T1611", "CVE": "CVE-2024-21626", "Playbook": ["Update Runc", "ReadOnly RootFS", "Pod Security Policy"], "Insight": "Container escape detected. High risk of lateral movement to control plane."},
-        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", "Playbook": ["Disable SFTP", "Rotate DB Keys", "IP Blocklist"], "Insight": "Zero-day SQL injection in file transfer service. Immediate exfiltration in progress."},
-        {"ID": "TR-1085", "Severity": "High", "Source": "LimaCharlie", "Vector": "PaperCut RCE", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1210", "CVE": "CVE-2023-27350", "Playbook": ["Update Server", "Firewall Port 9191", "Kill Java Proc"], "Insight": "Remote code execution via setup-mode bypass. Metamorphic shellcode observed."},
-        {"ID": "TR-1086", "Severity": "Medium", "Source": "Suricata", "Vector": "ProxyNotShell", "Status": "Active", "lat": 35.6762, "lon": 139.6503, "MITRE": "T1190", "CVE": "CVE-2022-41040", "Playbook": ["PowerShell Rewrite", "Patch Exchange", "Disable Remote PS"], "Insight": "SSRF in Exchange Server. Attempting to reach internal API endpoints."},
-        {"ID": "TR-1087", "Severity": "Low", "Source": "Kube-Linter", "Vector": "DirtyPipe Exploit", "Status": "Active", "lat": -33.8688, "lon": 151.2093, "MITRE": "T1068", "CVE": "CVE-2022-0847", "Playbook": ["Update Kernel", "Limit Syscalls", "Reboot Node"], "Insight": "Local privilege escalation via pipe buffer corruption."},
-        {"ID": "TR-1088", "Severity": "High", "Source": "CloudTrail", "Vector": "Okta Session Hijack", "Status": "Active", "lat": 25.2048, "lon": 55.2708, "MITRE": "T1539", "CVE": "IDP-Exploit", "Playbook": ["Revoke Token", "Enforce MFA", "Suspend User"], "Insight": "Cross-tenant identity impersonation detected via session token theft."},
-        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Active", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966", "Playbook": ["Clear Sessions", "Update NetScaler", "Kill Active VPN"], "Insight": "Information disclosure vulnerability allowing session hijacking without credentials."}
+        {"ID": "TR-1081", "Severity": "Critical", "Source": "Suricata", "Vector": "Log4Shell RCE", "Status": "Active", "lat": 51.5074, "lon": -0.1278, "MITRE": "T1190", "CVE": "CVE-2021-44228", "Playbook": ["Disable JNDI", "Patch Log4j", "WAF Filter"], "Insight": "Polymorphic payload detected. Attackers are obfuscating ${jndi:ldap} strings to bypass EDR filters."},
+        {"ID": "TR-1082", "Severity": "High", "Source": "EDR-Core", "Vector": "PwnKit Escalation", "Status": "Active", "lat": 48.8566, "lon": 2.3522, "MITRE": "T1068", "CVE": "CVE-2021-4034", "Playbook": ["Remove SUID bit", "Patch Polkit", "Isolate Host"], "Insight": "Metamorphic exploit attempt. The binary signature is cycling every execution to evade signature-based detection."},
+        {"ID": "TR-1083", "Severity": "Medium", "Source": "Kube-Sensor", "Vector": "runc Escape", "Status": "Active", "lat": 52.5200, "lon": 13.4050, "MITRE": "T1611", "CVE": "CVE-2024-21626", "Playbook": ["Update Runc", "ReadOnly RootFS", "Pod Security Policy"], "Insight": "Container escape detected. High-risk lateral movement to K8s control plane observed."},
+        {"ID": "TR-1084", "Severity": "Critical", "Source": "Darktrace", "Vector": "MOVEit Transfer Exfil", "Status": "Active", "lat": 40.7128, "lon": -74.0060, "MITRE": "T1190", "CVE": "CVE-2023-34362", "Playbook": ["Disable SFTP", "Rotate DB Keys", "IP Blocklist"], "Insight": "Zero-day SQL injection in file transfer service. Immediate exfiltration detected in data-tier vpc."},
+        {"ID": "TR-1085", "Severity": "High", "Source": "Falcon-X", "Vector": "PaperCut RCE", "Status": "Active", "lat": 34.0522, "lon": -118.2437, "MITRE": "T1210", "CVE": "CVE-2023-27350", "Playbook": ["Update Server", "Firewall Port 9191", "Kill Java Process"], "Insight": "Remote code execution via setup-mode bypass. Metamorphic shellcode payload detected in runtime memory."},
+        {"ID": "TR-1089", "Severity": "Critical", "Source": "GuardDuty", "Vector": "Citrix Bleed", "Status": "Active", "lat": 1.3521, "lon": 103.8198, "MITRE": "T1190", "CVE": "CVE-2023-4966", "Playbook": ["Clear Sessions", "Update NetScaler", "Kill Active VPN"], "Insight": "Information disclosure vulnerability allowing session hijacking without credentials. Active session theft in progress."}
     ]
     
     if 'threat_log' not in st.session_state:
-        # Prioritize local telemetry and merge with random samples
-        full_pool = local_data + threat_pool
-        sample_size = min(len(full_pool), 4)
-        initial_log = random.sample(full_pool, sample_size)
+        initial_log = random.sample(threat_pool, 4)
         for item in initial_log:
             item["Time"] = datetime.now().strftime("%H:%M:%S")
         st.session_state.threat_log = initial_log
@@ -217,21 +201,15 @@ def get_pipeline_status_data() -> pd.DataFrame:
     ])
 
 
-@st.cache_data
-def get_base64_logo(file_path: str) -> str:
-    if os.path.exists(file_path):
-        with open(file_path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    return ""
-
-
 def render_header() -> None:
     logo_path = os.path.join(os.path.dirname(__file__), "securex.png")
     if not os.path.exists(logo_path):
         logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
-    
-    logo_b64 = get_base64_logo(logo_path)
-    logo_html = f'<img class="logo-img" src="data:image/png;base64,{logo_b64}" style="height:150px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">' if logo_b64 else ""
+    logo_html = ""
+    if os.path.exists(logo_path):
+        with open(logo_path, "rb") as f:
+            logo_b64 = base64.b64encode(f.read()).decode()
+            logo_html = f'<img class="logo-img" src="data:image/png;base64,{logo_b64}" style="height:150px;margin-right:25px;vertical-align:middle;filter:drop-shadow(0 0 15px #00FF00);">'
     
     header_html = f'<div class="header-container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:30px;border-bottom:1px solid #1A1A1A;padding-bottom:20px;width:100%;"><div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:center;">{logo_html}<div><h1 style="margin:0;font-family:\'Courier New\',monospace;font-size:2.2rem;font-weight:900;letter-spacing:4px;color:#00FF00;">SECUREX COMMAND</h1><p style="color:#FFFFFF;margin:5px 0 0 0;font-size:0.85rem;letter-spacing:1px;">[ SYSTEM INFRASTRUCTURE MONITORING V1.0 ]</p></div></div><div class="header-metrics" style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;justify-content:center;"><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">THREATS TODAY</div><div style="color:#00FF00;font-weight:bold;font-size:1.2rem;">17</div></div><div style="text-align:right;"><div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">ASSETS MONITORED</div><div style="color:#FFFFFF;font-weight:bold;font-size:1.2rem;">2,491</div></div><div style="background:#000000;border:1px solid #00FF00;padding:8px 15px;"><span class="status-pulse-commander"></span><span style="color:#00FF00;font-weight:bold;font-size:0.8rem;letter-spacing:2px;font-family:\'Courier New\',monospace;">COMMAND CENTER ACTIVE</span></div></div></div>'
     st.markdown(header_html, unsafe_allow_html=True)
@@ -254,10 +232,10 @@ def render_active_threats() -> None:
         st.markdown(threat_html, unsafe_allow_html=True)
 
 
-def render_anomaly_map() -> None:
+def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// LIVE GEOSPATIAL TELEMETRY [ SATELLITE MODE ]</p>", unsafe_allow_html=True)
 
-    # Determine "Home" location
+    # HQ Coordinates
     try:
         url = 'http://ip-api.com/json'
         response = urlopen(url)
@@ -266,11 +244,15 @@ def render_anomaly_map() -> None:
     except:
         curr_lat, curr_lon = 51.5074, -0.1278
 
-    threats = get_active_threats_data()
-    # Create arcs for movement
+    threats = get_active_threats_data().copy()
     threats['target_lat'] = curr_lat
     threats['target_lon'] = curr_lon
-    
+
+    # Dynamic View Logic
+    view_lat = zoom_lat if zoom_lat else curr_lat
+    view_lon = zoom_lon if zoom_lon else curr_lon
+    zoom_level = 10 if zoom_lat else 2
+
     scatterplot = pdk.Layer(
         "ScatterplotLayer",
         threats,
@@ -290,11 +272,11 @@ def render_anomaly_map() -> None:
         get_width=3,
         animation_speed=2,
     )
-    
+
     view_state = pdk.ViewState(
-        latitude=curr_lat,
-        longitude=curr_lon,
-        zoom=2,
+        latitude=view_lat,
+        longitude=view_lon,
+        zoom=zoom_level,
         pitch=45,
     )
     
@@ -309,35 +291,33 @@ def render_anomaly_map() -> None:
 
 
 def render_ai_analyst() -> None:
-    # Pull latest threat for interaction
-    threat_data = st.session_state.get('threat_log', [])
-    if not threat_data: return
-    
-    latest = threat_data[0]
-    
+    threat_list = st.session_state.get('threat_log', [])
+    if not threat_list: return
+
+    latest = threat_list[0]
+
     st.markdown(f"""
     <div class="ai-analyst-box">
-        <div style="color:#00FF00;font-weight:bold;font-size:0.9rem;margin-bottom:15px;">🤖 AI CHARLIE // SOC MENTOR ACTIVE</div>
+        <div style="color:#00FF00;font-weight:bold;font-size:0.9rem;margin-bottom:15px;">🤖 AI CHARLIE // SOC CO-PILOT ACTIVE</div>
         <div class="ai-content-wrapper" style="display:flex;gap:30px;flex-wrap:wrap;">
             <div style="flex:1;min-width:280px;">
-                <p style="color:#FFFFFF;font-size:0.9rem;font-weight:bold;margin-bottom:5px;">ALERT: {latest['Vector']}</p>
+                <p style="color:#FFFFFF;font-size:0.9rem;font-weight:bold;margin-bottom:5px;">VECTOR: {latest['Vector']}</p>
                 <p style="color:#AAAAAA;font-size:0.85rem;line-height:1.6;">"{latest['Insight']}"</p>
             </div>
-            <div class="risk-score-box" style="width:220px;border-left:1px solid #1A1A1A;padding-left:20px;">
+            <div class="risk-score-box" style="width:220px;border-left:1px solid rgba(0,255,0,0.2);padding-left:20px;">
                 <div style="color:#FFFFFF;font-size:0.65rem;letter-spacing:1px;">INCIDENT RISK</div>
-                <div style="color:#00FF00;font-size:1.8rem;font-weight:bold;">{random.randint(75, 99)}/100</div>
+                <div style="color:#00FF00;font-size:2rem;font-weight:bold;">{random.randint(85, 99)}/100</div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Interactive Response Layer for Students
-    st.markdown("<p style='color: #00FF00; font-size: 0.75rem; margin-top: 15px;'>// HUMAN ANALYST PLAYBOOK SELECTION</p>", unsafe_allow_html=True)
-    cols = st.columns(len(latest['Playbook']))
+    st.markdown("<p style='color: #00FF00; font-size: 0.7rem; margin-top: 15px;'>// STUDENT ACTION: SELECT REMEDIATION PLAYBOOK</p>", unsafe_allow_html=True)
+    playbook_cols = st.columns(len(latest['Playbook']))
     for i, action in enumerate(latest['Playbook']):
-        if cols[i].button(action, use_container_width=True, key=f"btn_{latest['ID']}_{i}"):
-            st.toast(f"Student Action Confirmed: {action}", icon="✅")
-            # Success logic: Clear the latest threat from log to simulate remediation
+        if playbook_cols[i].button(action, use_container_width=True, key=f"play_{latest['ID']}_{i}"):
+            st.balloons()
+            st.success(f"SUCCESS: {action} EXECUTED.")
             st.session_state.threat_log.pop(0)
             st.rerun()
 
@@ -363,9 +343,6 @@ def main() -> None:
             # Prepend to keep latest on top
             st.session_state.threat_log = [new_threat] + st.session_state.threat_log[:9]
             st.rerun()
-
-        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
-        st.markdown("<div style='border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;'><p style='color: #555555; font-size: 0.6rem; line-height: 1.2;'>// GDPR COMPLIANCE: THIS SYSTEM PROCESSES TEMPORARY IP DATA FOR GEOSPATIAL PROJECTION. DATA IS VOLATILE AND NOT PERSISTED BEYOND THE ACTIVE SESSION. [ FRAMEWORK VERSION 1.0 ]</p></div>", unsafe_allow_html=True)
 
     # Automatic Breach Trigger Logic
     critical_threat_active = any(t.get("Severity") == "Critical" for t in st.session_state.get('threat_log', []))
