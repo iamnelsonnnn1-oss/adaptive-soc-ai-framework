@@ -961,7 +961,7 @@ def render_ai_analyst() -> None:
 
     st.sidebar.text_input("NEURAL LINK CMD:", key="ai_chat_input", on_change=handle_chat, placeholder="Ask Charlie...")
     
-    if not api_key:
+    if not ai_link:
         st.sidebar.warning("⚠️ Neural Link Key Missing. Connect via Secrets or Sidebar.")
     else:
         if st.sidebar.button("⚡ TEST NEURAL LINK", use_container_width=True):
