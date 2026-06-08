@@ -347,20 +347,29 @@ def get_ai_engine_metrics() -> dict:
     }
 
 
-@st.cache_resource
 def get_aws_client(service_name: str):
-    """Cached AWS client to optimize performance and reduce initialization overhead."""
-    if "AWS_ACCESS_KEY_ID" in st.secrets and "AWS_SECRET_ACCESS_KEY" in st.secrets:
-        try:
-            return boto3.client(
-                service_name,
-                aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
-                aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
-                region_name=st.secrets.get("AWS_DEFAULT_REGION", "eu-central-1")
-            )
-        except Exception:
-            return None
-    return None
+    """Helper to retrieve a cached AWS client using session-managed credentials."""
+    return _get_cached_aws_client(
+        service_name,
+        st.session_state.get("aws_access_key"),
+        st.session_state.get("aws_secret_key"),
+        st.session_state.get("aws_region")
+    )
+
+
+@st.cache_resource
+def _get_cached_aws_client(service_name, access_key, secret_key, region):
+    if not access_key or not secret_key:
+        return None
+    try:
+        return boto3.client(
+            service_name,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name=region or "eu-central-1"
+        )
+    except Exception:
+        return None
 
 
 def get_cloudwatch_telemetry() -> list:
@@ -906,14 +915,17 @@ def render_ai_analyst() -> None:
     hint_text = f"<br><br>> [HINT]: {latest.get('Hint')}" if st.session_state.show_hint else ""
     error_text = f"<br><br><span style='color:#FF4B4B;'>[ERROR]: {st.session_state.last_error}</span>" if st.session_state.last_error else ""
 
-    api_key = st.session_state.get('gemini_api_key')
-    link_status = "<span style='color:#00FF00;'>ONLINE</span>" if api_key else "<span style='color:#FF4B4B;'>OFFLINE (MISSING KEY)</span>"
+    ai_link = st.session_state.get('gemini_api_key')
+    aws_link = st.session_state.get('aws_access_key')
+    ai_status = "<span style='color:#00FF00;'>ONLINE</span>" if ai_link else "<span style='color:#FF4B4B;'>OFFLINE</span>"
+    aws_status = "<span style='color:#00FF00;'>ONLINE</span>" if aws_link else "<span style='color:#FF4B4B;'>OFFLINE</span>"
 
     st.sidebar.markdown(f"""
     <div class="analyst-terminal">
             > INITIALIZING AI CHARLIE ANALYST...<br>
         > RANK: {current_rank}<br>
-        > NEURAL LINK: {link_status}<br>
+        > NEURAL LINK (AI): {ai_status}<br>
+        > NEURAL LINK (AWS): {aws_status}<br>
         > SCORE: {st.session_state.points} XP<br>
         -------------------------<br>
             > 🤖 AI CHARLIE: Commander, {latest.get('Vector', 'Alert')} detected.<br><br>
@@ -922,12 +934,20 @@ def render_ai_analyst() -> None:
     </div>
     """, unsafe_allow_html=True)
 
-    st.sidebar.text_input(
-        "🔗 Neural Link (Gemini API Key):", 
-        type="password", 
-        key="gemini_api_key",
-        help="Get a free key from https://aistudio.google.com/app/apikey"
-    )
+    # Unified Connection Hub for Secrets or Sidebar input
+    with st.sidebar.expander("🔗 CONNECTION BRIDGES", expanded=not (ai_link and aws_link)):
+        st.text_input(
+            "Gemini API Key:", 
+            type="password", 
+            key="gemini_api_key",
+            help="Get a free key from https://aistudio.google.com/app/apikey"
+        )
+        st.text_input("AWS Access Key:", type="password", key="aws_access_key")
+        st.text_input("AWS Secret Key:", type="password", key="aws_secret_key")
+        st.text_input("AWS Region:", key="aws_region", placeholder="eu-central-1")
+        if st.button("REFRESH CONNECTIONS"):
+            st.cache_resource.clear()
+            st.rerun()
 
     def handle_chat():
         query = st.session_state.ai_chat_input
@@ -1092,6 +1112,9 @@ def initialize_session_state() -> None:
         "remediation_target": None,
         "active_case": None,
         "gemini_api_key": st.secrets.get("GEMINI_API_KEY", ""),
+        "aws_access_key": st.secrets.get("AWS_ACCESS_KEY_ID", ""),
+        "aws_secret_key": st.secrets.get("AWS_SECRET_ACCESS_KEY", ""),
+        "aws_region": st.secrets.get("AWS_DEFAULT_REGION", "eu-central-1"),
         "user_profile": None,
         "severity_filter": None,
         "aws_credentials_warning_shown": False # Track if AWS warning has been shown
@@ -1104,11 +1127,6 @@ def initialize_session_state() -> None:
 def main() -> None:
     initialize_session_state()
     perform_system_hygiene()
-
-    # Unified AWS Credential check outside of cached functions
-    if "AWS_ACCESS_KEY_ID" not in st.secrets and not st.session_state.get('aws_credentials_warning_shown', False):
-        st.sidebar.warning("⚠️ AWS Neural Link Offline: Using Local Telemetry.")
-        st.session_state.aws_credentials_warning_shown = True
 
     if st.session_state.remediation_target:
         remediation_dialog(st.session_state.remediation_target)
