@@ -11,7 +11,6 @@ from zoneinfo import ZoneInfo
 import time
 import google.generativeai as genai
 import boto3
-import plotly.express as px
 
 
 # --- TACTICAL DATA MODELS ---
@@ -512,35 +511,7 @@ def render_threat_distribution() -> None:
     df = pd.DataFrame(threat_log)
     severity_counts = df['Severity'].value_counts().reset_index()
     severity_counts.columns = ['Severity', 'Count']
-
-    # Matrix-style color mapping to align with the framework aesthetic
-    color_map = {
-        "Critical": "#00FF00",  # Neon Green
-        "High": "#FFFFFF",      # White
-        "Medium": "#777777",    # Gray
-        "Low": "#444444"        # Dark Gray
-    }
-
-    fig = px.pie(
-        severity_counts, 
-        values='Count', 
-        names='Severity',
-        hole=0.6,
-        color='Severity',
-        color_discrete_map=color_map,
-        category_orders={"Severity": ["Critical", "High", "Medium", "Low"]}
-    )
-
-    fig.update_layout(
-        showlegend=False,
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        margin=dict(t=10, b=10, l=10, r=10),
-        height=220
-    )
-    fig.update_traces(textposition='inside', textinfo='percent+label')
-
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.bar_chart(severity_counts.set_index('Severity'), color="#00FF00")
 
 
 def render_threat_velocity() -> None:
