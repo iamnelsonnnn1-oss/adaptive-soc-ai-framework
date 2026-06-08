@@ -100,6 +100,13 @@ IR_PHASE_CHALLENGES = {
     7: {"q": "What is the primary goal of a Post-Incident Review?", "options": ["Assign Blame", "Improve Controls", "Close Ticket"], "correct": "Improve Controls", "exp": "The objective is to identify process gaps and strengthen the defense posture for future events."}
 }
 
+# --- AI ENGINE CONFIGURATION ---
+DEFAULT_GEMINI_MODEL = st.secrets.get("GEMINI_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-1.5-flash"
+
+def get_gemini_api_key():
+    """Cascading retrieval for Gemini API Key (Sidebar > Secrets > ENV)."""
+    return st.session_state.get("gemini_api_key") or st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+
 @st.cache_data(ttl=86400)
 def fetch_global_intel_feed():
     """
@@ -794,8 +801,9 @@ def render_case_profile(case_data):
 
 
 def ask_ai_charlie(query, threat_context=None):
+    """AI Charlie Forensic Mentor: NIST-aligned analysis and guidance."""
     try:
-        api_key = st.session_state.get('gemini_api_key')
+        api_key = get_gemini_api_key()
         if not api_key:
             return "AI Charlie's neural link is offline. (Missing API Key)"
 
@@ -803,21 +811,26 @@ def ask_ai_charlie(query, threat_context=None):
         prompt = f"You are AI Charlie, a Senior SOC Lead and Mentor. Guide the student through the incident context: {threat_context} following NIST SP 800-61 Rev. 2 standards. Student query: {query}. Provide technical, concise advice and explain the 'why' based on core security principles."
         
         response = client.models.generate_content(
-            model='gemini-3.5-flash',
+            model=DEFAULT_GEMINI_MODEL,
             contents=prompt
         )
-        return response.text
+        
+        if response and hasattr(response, 'text') and response.text:
+            return response.text
+        return "AI Charlie is silent. (Model returned no text content)"
+
     except Exception as e:
         error_msg = str(e)
-        if "429" in error_msg:
-            return "Neural Link Error: API Quota exceeded. Please wait a moment before trying again."
-        if "API_KEY_INVALID" in error_msg:
-            return "Neural Link Error: The provided API Key is invalid or expired."
-        if "User location is not supported" in error_msg:
-            return "Neural Link Error: Gemini API is not available in your current region."
-        if "quota" in error_msg.lower():
-            return "Neural Link Error: API Quota exceeded. Please verify your billing/usage limits."
-        return "Neural Link Error: Unable to establish connection to AI Charlie. Check network or API quotas."
+        if "401" in error_msg or "API_KEY_INVALID" in error_msg:
+            return f"Neural Link Error: Invalid API Key. Please verify in Sidebar or Secrets."
+        if "429" in error_msg or "quota" in error_msg.lower():
+            return "Neural Link Error: API Quota exceeded. Please verify billing or wait."
+        if "404" in error_msg or "not found" in error_msg.lower():
+            return f"Neural Link Error: Model '{DEFAULT_GEMINI_MODEL}' not supported or not found."
+        if "location" in error_msg.lower():
+            return "Neural Link Error: Gemini API is restricted in your current region."
+        
+        return f"Neural Link Error: {error_msg}"
 
 
 def fetch_cve_details(cve_id: str) -> str:
@@ -915,7 +928,7 @@ def render_ai_analyst() -> None:
     hint_text = f"<br><br>> [HINT]: {latest.get('Hint')}" if st.session_state.show_hint else ""
     error_text = f"<br><br><span style='color:#FF4B4B;'>[ERROR]: {st.session_state.last_error}</span>" if st.session_state.last_error else ""
 
-    ai_link = st.session_state.get('gemini_api_key')
+    ai_link = get_gemini_api_key()
     aws_link = st.session_state.get('aws_access_key')
     ai_status = "<span style='color:#00FF00;'>ONLINE</span>" if ai_link else "<span style='color:#FF4B4B;'>OFFLINE</span>"
     aws_status = "<span style='color:#00FF00;'>ONLINE</span>" if aws_link else "<span style='color:#FF4B4B;'>OFFLINE</span>"
@@ -1111,7 +1124,7 @@ def initialize_session_state() -> None:
         "threat_timeline": [],
         "remediation_target": None,
         "active_case": None,
-        "gemini_api_key": st.secrets.get("GEMINI_API_KEY", ""),
+        "gemini_api_key": get_gemini_api_key() or "",
         "aws_access_key": st.secrets.get("AWS_ACCESS_KEY_ID", ""),
         "aws_secret_key": st.secrets.get("AWS_SECRET_ACCESS_KEY", ""),
         "aws_region": st.secrets.get("AWS_DEFAULT_REGION", "eu-central-1"),
