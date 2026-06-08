@@ -347,19 +347,29 @@ def get_ai_engine_metrics() -> dict:
     }
 
 
+@st.cache_resource
+def get_aws_client(service_name: str):
+    """Cached AWS client to optimize performance and reduce initialization overhead."""
+    if "AWS_ACCESS_KEY_ID" in st.secrets and "AWS_SECRET_ACCESS_KEY" in st.secrets:
+        try:
+            return boto3.client(
+                service_name,
+                aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
+                aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
+                region_name=st.secrets.get("AWS_DEFAULT_REGION", "eu-central-1")
+            )
+        except Exception:
+            return None
+    return None
+
+
 def get_cloudwatch_telemetry() -> list:
     """Queries CloudWatch Logs Insights for tactical threat telemetry."""
-    if "AWS_ACCESS_KEY_ID" not in st.secrets:
+    logs = get_aws_client('logs')
+    if not logs:
         return []
     
     try:
-        logs = boto3.client(
-            'logs',
-            aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
-            aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
-            region_name=st.secrets.get("AWS_DEFAULT_REGION", "eu-central-1")
-        )
-        
         log_group = st.secrets.get("CLOUDWATCH_LOG_GROUP", "/aws/soc/threats")
         query = (
             "fields @timestamp, id, severity, source, vector, lat, lon, mitre, cve, insight "
