@@ -1115,41 +1115,45 @@ def main() -> None:
     render_user_profile()
     render_risk_dashboard()
 
-    if st.session_state.get('show_intel_feed') and threat_log:
-        latest = threat_log[0]
-        st.markdown(f"""
-            <div style="background: rgba(0, 40, 0, 0.85); border: 2px solid #00FF00; padding: 20px; border-radius: 5px; margin-bottom: 25px; backdrop-filter: blur(10px);">
-                <h3 style="color: #00FF00; margin: 0 0 10px 0;">📡 SIEM INTELLIGENCE FEED: {latest.get('ID')}</h3>
-                <p style="color: #FFFFFF; font-size: 0.9rem;"><b>Vector:</b> {latest.get('Vector')} | <b>Source:</b> {latest.get('Source')} | <b>Status:</b> {latest.get('Status')}</p>
-                <p style="color: #AAAAAA; font-size: 0.85rem; border-top: 1px solid rgba(0,255,0,0.2); padding-top: 10px;">{latest.get('Insight')}</p>
-            </div>
-        """, unsafe_allow_html=True)
+    # SIEM NAVIGATION TABS
+    tab_ops, tab_blog = st.tabs(["🛡️ COMMAND CENTER", "📰 INTEL BLOG"])
 
-    map_lat, map_lon = None, None
-    if active_breach_mode and latest_critical:
-        map_lat, map_lon = latest_critical['lat'], latest_critical['lon']
-    
-    col_left, col_center, col_right = st.columns([1.2, 4, 1.2])
-    
-    with col_left:
-        render_active_threats()
-        
-    with col_center:
-        render_anomaly_map(zoom_lat=map_lat, zoom_lon=map_lon)
-        
-        # SIEM Chart Tier: Providing space for distribution and velocity side-by-side
-        chart_col1, chart_col2 = st.columns(2)
-        with chart_col1: render_threat_distribution()
-        with chart_col2: render_threat_velocity()
-        
-    with col_right:
-        render_pipeline_status()
+    with tab_ops:
+        if st.session_state.get('show_intel_feed') and threat_log:
+            latest = threat_log[0]
+            st.markdown(f"""
+                <div style="background: rgba(0, 40, 0, 0.85); border: 2px solid #00FF00; padding: 20px; border-radius: 5px; margin-bottom: 25px; backdrop-filter: blur(10px);">
+                    <h3 style="color: #00FF00; margin: 0 0 10px 0;">📡 SIEM INTELLIGENCE FEED: {latest.get('ID')}</h3>
+                    <p style="color: #FFFFFF; font-size: 0.9rem;"><b>Vector:</b> {latest.get('Vector')} | <b>Source:</b> {latest.get('Source')} | <b>Status:</b> {latest.get('Status')}</p>
+                    <p style="color: #AAAAAA; font-size: 0.85rem; border-top: 1px solid rgba(0,255,0,0.2); padding-top: 10px;">{latest.get('Insight')}</p>
+                </div>
+            """, unsafe_allow_html=True)
 
-    st.divider()
-    render_ai_engine_telemetry()
-    render_ai_analyst()
-    render_incident_ledger()
-    render_global_intel()
+        map_lat, map_lon = None, None
+        if active_breach_mode and latest_critical:
+            map_lat, map_lon = latest_critical['lat'], latest_critical['lon']
+        
+        col_left, col_center, col_right = st.columns([1.2, 1.2, 4])
+        
+        with col_left:
+            render_active_threats()
+            
+        with col_center:
+            render_pipeline_status()
+            
+        with col_right:
+            render_anomaly_map(zoom_lat=map_lat, zoom_lon=map_lon)
+            chart_col1, chart_col2 = st.columns(2)
+            with chart_col1: render_threat_distribution()
+            with chart_col2: render_threat_velocity()
+
+        st.divider()
+        render_ai_engine_telemetry()
+        render_ai_analyst()
+        render_incident_ledger()
+
+    with tab_blog:
+        render_global_intel()
 
     if breach_sim:
         time.sleep(1)
