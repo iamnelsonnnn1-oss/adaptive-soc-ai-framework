@@ -347,6 +347,63 @@ def get_ai_engine_metrics() -> dict:
     }
 
 
+def get_cloudwatch_telemetry() -> list:
+    """Queries CloudWatch Logs Insights for tactical threat telemetry."""
+    if "AWS_ACCESS_KEY_ID" not in st.secrets:
+        return []
+    
+    try:
+        logs = boto3.client(
+            'logs',
+            aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
+            aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
+            region_name=st.secrets.get("AWS_DEFAULT_REGION", "eu-central-1")
+        )
+        
+        log_group = st.secrets.get("CLOUDWATCH_LOG_GROUP", "/aws/soc/threats")
+        query = (
+            "fields @timestamp, id, severity, source, vector, lat, lon, mitre, cve, insight "
+            "| filter severity = 'Critical' or severity = 'High' "
+            "| sort @timestamp desc "
+            "| limit 10"
+        )
+        
+        start_query_response = logs.start_query(
+            logGroupName=log_group,
+            startTime=int((datetime.now().timestamp() - 3600)), # Last 60 mins
+            endTime=int(datetime.now().timestamp()),
+            queryString=query,
+        )
+        
+        query_id = start_query_response['queryId']
+        # Poll for results (Simplified for Streamlit refresh)
+        time.sleep(1) 
+        response = logs.get_query_results(queryId=query_id)
+        
+        parsed_logs = []
+        for result in response.get('results', []):
+            # Map list of dicts to a single dict
+            entry = {field['field']: field['value'] for field in result}
+            parsed_logs.append({
+                "ID": entry.get("id", "CW-LOG"),
+                "Severity": entry.get("severity", "Medium"),
+                "Source": entry.get("source", "CloudWatch"),
+                "Vector": entry.get("vector", "Unidentified Traffic"),
+                "Status": "Active",
+                "lat": float(entry.get("lat", 0)),
+                "lon": float(entry.get("lon", 0)),
+                "MITRE": entry.get("mitre", "N/A"),
+                "CVE": entry.get("cve", "N/A"),
+                "Insight": entry.get("insight", "Log data ingested from AWS CloudWatch."),
+                "Time": entry.get("@timestamp", "").split(" ")[1].split(".")[0], # Format to HH:MM:SS
+                "Playbook": ["Block IP", "Isolate VPC", "Audit Logs"], # Default remediation
+                "Correct": "Block IP"
+            })
+        return parsed_logs
+    except Exception as e:
+        return []
+
+
 def get_active_threats_data() -> pd.DataFrame:
     local_data = []
     
@@ -374,7 +431,10 @@ def get_active_threats_data() -> pd.DataFrame:
             except Exception:
                 pass
 
-    return pd.DataFrame(local_data + MOCK_THREAT_POOL)
+    # Aggregate real-world CloudWatch telemetry with static pool
+    cw_data = get_cloudwatch_telemetry()
+    
+    return pd.DataFrame(cw_data + local_data + MOCK_THREAT_POOL)
 
 
 def get_pipeline_status_data() -> pd.DataFrame:
@@ -716,7 +776,7 @@ def ask_ai_charlie(query, threat_context=None):
         
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = f"You are AI Charlie, an expert SOC mentor. Incident: {threat_context}. Student asks: {query}. Keep it technical."
+        prompt = f"You are AI Charlie, a Senior SOC Lead and Mentor. Guide the student through the incident context: {threat_context} following NIST SP 800-61 Rev. 2 standards. Student query: {query}. Provide technical, concise advice and explain the 'why' based on core security principles."
         
         response = model.generate_content(prompt)
         return response.text
