@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 import time
 import google.generativeai as genai
 import boto3
+import plotly.express as px
 
 
 # --- TACTICAL DATA MODELS ---
@@ -123,11 +124,6 @@ def fetch_global_intel_feed():
             "source": "SANS ISC", "title": "Handler's Diary: New Obfuscation Techniques in Malware Payloads", "severity": "Medium", "url": "https://isc.sans.edu/"
         }
     ]
-GLOBAL_INTEL_FEED = [
-    {"source": "CISA", "title": "AA24-051A: Phishing Campaign targeting US Govt", "severity": "High", "url": "https://www.cisa.gov/news-events/alerts/2024/02/21/cisa-releases-advisory-phishing-campaign-targeting-us-government-entities"},
-    {"source": "BleepingComputer", "title": "New Ransomware-as-a-Service 'X-Force' Emerging", "severity": "Critical", "url": "https://www.bleepingcomputer.com/"},
-    {"source": "KrebsOnSecurity", "title": "Critical Zero-Day in Common Firewall Firmware", "severity": "Medium", "url": "https://krebsonsecurity.com/"}
-]
 
 
 def perform_system_hygiene() -> None:
@@ -511,7 +507,35 @@ def render_threat_distribution() -> None:
     df = pd.DataFrame(threat_log)
     severity_counts = df['Severity'].value_counts().reset_index()
     severity_counts.columns = ['Severity', 'Count']
-    st.bar_chart(severity_counts.set_index('Severity'), color="#00FF00")
+
+    # Mapping colors to match the SECUREX Matrix aesthetic
+    color_map = {
+        "Critical": "#00FF00", 
+        "High": "#FFFFFF", 
+        "Medium": "#777777", 
+        "Low": "#444444"
+    }
+
+    fig = px.pie(
+        severity_counts, 
+        values='Count', 
+        names='Severity',
+        hole=0.6,
+        color='Severity',
+        color_discrete_map=color_map,
+        category_orders={"Severity": ["Critical", "High", "Medium", "Low"]}
+    )
+
+    fig.update_layout(
+        showlegend=False,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=0, b=0, l=0, r=0),
+        height=200
+    )
+    fig.update_traces(textposition='inside', textinfo='percent+label')
+
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
 def render_threat_velocity() -> None:
