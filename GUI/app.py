@@ -535,7 +535,16 @@ def render_threat_distribution() -> None:
     )
     fig.update_traces(textposition='inside', textinfo='percent+label')
 
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    # SIEM Interactivity: Enable segment selection to filter the Master Incident Ledger
+    selection = st.plotly_chart(
+        fig, use_container_width=True, config={'displayModeBar': False}, on_select="rerun", key="threat_distribution_chart"
+    )
+
+    # Update global filter state based on donut segment selection
+    if selection and selection.get("selection") and selection["selection"].get("points"):
+        st.session_state.severity_filter = selection["selection"]["points"][0]["label"]
+    else:
+        st.session_state.severity_filter = None
 
 
 def render_threat_velocity() -> None:
@@ -747,22 +756,12 @@ def render_user_profile() -> None:
     if 'user_profile' not in st.session_state:
         st.session_state.user_profile = None
 
+    # Username signup process hidden per Commander's request. 
+    # Defaulting to active telemetry mode.
     if not st.session_state.user_profile:
-        with st.sidebar.expander("🔐 COMMANDER SIGNUP / LOGIN", expanded=True):
-            username = st.text_input("Username")
-            track = st.selectbox("Select Learning Track", ["SOC Analyst L1", "Network Defender", "Threat Hunter"])
-            if st.button("INITIALIZE PROFILE"):
-                st.session_state.user_profile = {
-                    "username": username,
-                    "track": track,
-                    "xp": 0,
-                    "completed_cases": 0,
-                    "started_at": datetime.now().strftime("%Y-%m-%d")
-                }
-                st.rerun()
-        return
+        st.sidebar.markdown("<p style='color: #777777; font-size: 0.6rem; margin-bottom: 20px;'>// ANONYMOUS COMMANDER MODE</p>", unsafe_allow_html=True)
 
-    # Progress Tracking Display
+    # Tactical XP Progress Tracking
     points = st.session_state.get('points', 0)
     xp_to_next = 100 - (points % 100)
     st.sidebar.markdown(f"""
@@ -775,14 +774,15 @@ def render_user_profile() -> None:
         </div>
     """, unsafe_allow_html=True)
 
-    profile = st.session_state.user_profile
-    st.sidebar.markdown(f"""
-        <div style="border: 1px solid #00FF00; padding: 10px; background: rgba(0,255,0,0.05); margin-bottom: 20px;">
-            <b style="color:#00FF00;">OFFICER: {profile['username'].upper()}</b><br>
-            <span style="font-size:0.7rem;">TRACK: {profile['track']}</span><br>
-            <span style="font-size:0.7rem;">ENLISTED: {profile['started_at']}</span>
-        </div>
-    """, unsafe_allow_html=True)
+    if st.session_state.user_profile:
+        profile = st.session_state.user_profile
+        st.sidebar.markdown(f"""
+            <div style="border: 1px solid #00FF00; padding: 10px; background: rgba(0,255,0,0.05); margin-bottom: 20px;">
+                <b style="color:#00FF00;">OFFICER: {profile['username'].upper()}</b><br>
+                <span style="font-size:0.7rem;">TRACK: {profile['track']}</span><br>
+                <span style="font-size:0.7rem;">ENLISTED: {profile['started_at']}</span>
+            </div>
+        """, unsafe_allow_html=True)
 
 
 def render_ai_analyst() -> None:
@@ -915,6 +915,11 @@ def render_incident_ledger() -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 40px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// MASTER INCIDENT LEDGER</p>", unsafe_allow_html=True)
     threat_log = st.session_state.get("threat_log", []) or []
     
+    # Apply SIEM analytics filter from the distribution chart
+    if st.session_state.get("severity_filter"):
+        threat_log = [t for t in threat_log if t.get('Severity') == st.session_state.severity_filter]
+        st.markdown(f"<p style='color: #00FF00; font-size: 0.7rem; margin-top: -15px;'>// FILTERED VIEW: {st.session_state.severity_filter.upper()} SEVERITY</p>", unsafe_allow_html=True)
+
     st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 20px 0;'>", unsafe_allow_html=True)
 
     if not threat_log:
@@ -1009,7 +1014,8 @@ def initialize_session_state() -> None:
         "remediation_target": None,
         "active_case": None,
         "gemini_api_key": st.secrets.get("GEMINI_API_KEY", ""),
-        "user_profile": None
+        "user_profile": None,
+        "severity_filter": None
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -1108,7 +1114,6 @@ def main() -> None:
 
     render_user_profile()
     render_risk_dashboard()
-    render_global_intel()
 
     if st.session_state.get('show_intel_feed') and threat_log:
         latest = threat_log[0]
@@ -1131,8 +1136,11 @@ def main() -> None:
         
     with col_center:
         render_anomaly_map(zoom_lat=map_lat, zoom_lon=map_lon)
-        render_threat_distribution()
-        render_threat_velocity()
+        
+        # SIEM Chart Tier: Providing space for distribution and velocity side-by-side
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1: render_threat_distribution()
+        with chart_col2: render_threat_velocity()
         
     with col_right:
         render_pipeline_status()
@@ -1141,6 +1149,7 @@ def main() -> None:
     render_ai_engine_telemetry()
     render_ai_analyst()
     render_incident_ledger()
+    render_global_intel()
 
     if breach_sim:
         time.sleep(1)
