@@ -9,7 +9,7 @@ from urllib.request import urlopen
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import time
-import google.generativeai as genai
+from google import genai
 import boto3
 import plotly.express as px
 
@@ -407,14 +407,7 @@ def get_cloudwatch_telemetry() -> list:
                 "Correct": "Block IP"
             })
         return parsed_logs
-    except logs.exceptions.ResourceNotFoundException:
-        st.error(f"CloudWatch Log Group '{log_group}' not found. Check CLOUDWATCH_LOG_GROUP in secrets.")
-        return []
-    except logs.exceptions.ClientError as e:
-        st.error(f"CloudWatch API error: {e}. Check AWS permissions and region.")
-        return []
     except Exception as e:
-        st.error(f"Failed to fetch CloudWatch telemetry: {e}")
         return []
 
 
@@ -431,14 +424,8 @@ def get_active_threats_data() -> pd.DataFrame:
                 return []
             response = s3.get_object(Bucket=s3_bucket, Key="telemetry.json")
             local_data = json.loads(response['Body'].read().decode('utf-8'))
-        except s3.exceptions.NoSuchBucket:
-            st.error(f"S3 bucket '{s3_bucket}' not found. Check S3_BUCKET_NAME in secrets.")
-        except s3.exceptions.NoSuchKey:
-            st.error(f"S3 object 'telemetry.json' not found in bucket '{s3_bucket}'.")
-        except s3.exceptions.ClientError as e:
-            st.error(f"S3 API error: {e}. Check AWS permissions.")
         except Exception as e:
-            st.error(f"Failed to fetch S3 telemetry: {str(e)}")
+            pass
     
     # Fallback to local file if S3 fetch fails or isn't configured
     if not local_data:
@@ -793,11 +780,13 @@ def ask_ai_charlie(query, threat_context=None):
         if not api_key:
             return "AI Charlie's neural link is offline. (Missing API Key)"
 
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-3.5-flash')
+        client = genai.Client(api_key=api_key)
         prompt = f"You are AI Charlie, a Senior SOC Lead and Mentor. Guide the student through the incident context: {threat_context} following NIST SP 800-61 Rev. 2 standards. Student query: {query}. Provide technical, concise advice and explain the 'why' based on core security principles."
         
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model='gemini-3.5-flash',
+            contents=prompt
+        )
         return response.text
     except Exception as e:
         error_msg = str(e)
@@ -1105,6 +1094,11 @@ def initialize_session_state() -> None:
 def main() -> None:
     initialize_session_state()
     perform_system_hygiene()
+
+    # Unified AWS Credential check outside of cached functions
+    if "AWS_ACCESS_KEY_ID" not in st.secrets and not st.session_state.get('aws_credentials_warning_shown', False):
+        st.sidebar.warning("⚠️ AWS Neural Link Offline: Using Local Telemetry.")
+        st.session_state.aws_credentials_warning_shown = True
 
     if st.session_state.remediation_target:
         remediation_dialog(st.session_state.remediation_target)
