@@ -376,10 +376,17 @@ def get_cloudwatch_telemetry() -> list:
         )
         
         query_id = start_query_response['queryId']
-        # Poll for results (Simplified for Streamlit refresh)
-        time.sleep(1) 
-        response = logs.get_query_results(queryId=query_id)
+        # Poll for results with status awareness
+        for _ in range(10): # Increased polling attempts
+            response = logs.get_query_results(queryId=query_id)
+            if response.get('status') in ['Complete', 'Failed', 'Cancelled']:
+                break
+            time.sleep(0.5)
         
+        if response.get('status') != 'Complete':
+            st.error(f"CloudWatch query did not complete. Status: {response.get('status')}")
+            return []
+
         parsed_logs = []
         for result in response.get('results', []):
             # Map list of dicts to a single dict
@@ -400,7 +407,14 @@ def get_cloudwatch_telemetry() -> list:
                 "Correct": "Block IP"
             })
         return parsed_logs
+    except logs.exceptions.ResourceNotFoundException:
+        st.error(f"CloudWatch Log Group '{log_group}' not found. Check CLOUDWATCH_LOG_GROUP in secrets.")
+        return []
+    except logs.exceptions.ClientError as e:
+        st.error(f"CloudWatch API error: {e}. Check AWS permissions and region.")
+        return []
     except Exception as e:
+        st.error(f"Failed to fetch CloudWatch telemetry: {e}")
         return []
 
 
@@ -408,18 +422,23 @@ def get_active_threats_data() -> pd.DataFrame:
     local_data = []
     
     # S3 Telemetry Ingestion Logic
-    if "AWS_ACCESS_KEY_ID" in st.secrets:
+    s3 = get_aws_client('s3')
+    if s3:
         try:
-            s3 = boto3.client(
-                's3',
-                aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
-                aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
-                region_name=st.secrets.get("AWS_DEFAULT_REGION", "eu-central-1")
-            )
-            response = s3.get_object(Bucket=st.secrets["S3_BUCKET_NAME"], Key="telemetry.json")
+            s3_bucket = st.secrets.get("S3_BUCKET_NAME")
+            if not s3_bucket:
+                st.error("S3_BUCKET_NAME not found in Streamlit secrets.")
+                return []
+            response = s3.get_object(Bucket=s3_bucket, Key="telemetry.json")
             local_data = json.loads(response['Body'].read().decode('utf-8'))
+        except s3.exceptions.NoSuchBucket:
+            st.error(f"S3 bucket '{s3_bucket}' not found. Check S3_BUCKET_NAME in secrets.")
+        except s3.exceptions.NoSuchKey:
+            st.error(f"S3 object 'telemetry.json' not found in bucket '{s3_bucket}'.")
+        except s3.exceptions.ClientError as e:
+            st.error(f"S3 API error: {e}. Check AWS permissions.")
         except Exception as e:
-            st.sidebar.error(f"S3 Fetch Failed: {str(e)}")
+            st.error(f"Failed to fetch S3 telemetry: {str(e)}")
     
     # Fallback to local file if S3 fetch fails or isn't configured
     if not local_data:
@@ -770,12 +789,12 @@ def render_case_profile(case_data):
 
 def ask_ai_charlie(query, threat_context=None):
     try:
-        api_key = st.session_state.get('gemini_api_key') or st.secrets.get("GEMINI_API_KEY", "")
+        api_key = st.session_state.get('gemini_api_key')
         if not api_key:
             return "AI Charlie's neural link is offline. (Missing API Key)"
-        
+
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-3.5-flash')
         prompt = f"You are AI Charlie, a Senior SOC Lead and Mentor. Guide the student through the incident context: {threat_context} following NIST SP 800-61 Rev. 2 standards. Student query: {query}. Provide technical, concise advice and explain the 'why' based on core security principles."
         
         response = model.generate_content(prompt)
@@ -888,7 +907,7 @@ def render_ai_analyst() -> None:
     hint_text = f"<br><br>> [HINT]: {latest.get('Hint')}" if st.session_state.show_hint else ""
     error_text = f"<br><br><span style='color:#FF4B4B;'>[ERROR]: {st.session_state.last_error}</span>" if st.session_state.last_error else ""
 
-    api_key = st.session_state.get('gemini_api_key') or st.secrets.get("GEMINI_API_KEY")
+    api_key = st.session_state.get('gemini_api_key')
     link_status = "<span style='color:#00FF00;'>ONLINE</span>" if api_key else "<span style='color:#FF4B4B;'>OFFLINE (MISSING KEY)</span>"
 
     st.sidebar.markdown(f"""
@@ -904,12 +923,12 @@ def render_ai_analyst() -> None:
     </div>
     """, unsafe_allow_html=True)
 
-    if not st.session_state.gemini_api_key:
-        st.session_state.gemini_api_key = st.sidebar.text_input(
-            "🔗 Neural Link (Gemini API Key):", 
-            type="password", 
-            help="Get a free key from https://aistudio.google.com/app/apikey"
-        )
+    st.sidebar.text_input(
+        "🔗 Neural Link (Gemini API Key):", 
+        type="password", 
+        key="gemini_api_key",
+        help="Get a free key from https://aistudio.google.com/app/apikey"
+    )
 
     def handle_chat():
         query = st.session_state.ai_chat_input
@@ -1075,7 +1094,8 @@ def initialize_session_state() -> None:
         "active_case": None,
         "gemini_api_key": st.secrets.get("GEMINI_API_KEY", ""),
         "user_profile": None,
-        "severity_filter": None
+        "severity_filter": None,
+        "aws_credentials_warning_shown": False # Track if AWS warning has been shown
     }
     for key, val in defaults.items():
         if key not in st.session_state:
