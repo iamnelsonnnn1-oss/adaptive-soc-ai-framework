@@ -8,6 +8,7 @@ import json
 from urllib.request import urlopen
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import requests
 import time
 from google import genai
 import boto3
