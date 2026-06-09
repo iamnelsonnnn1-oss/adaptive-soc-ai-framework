@@ -1003,7 +1003,7 @@ def render_ai_analyst() -> None:
             with st.sidebar:
                 with st.spinner("Testing Link..."):
                     test_resp = ask_ai_charlie("Perform a short systems check. Are you online?")
-                    if "Error" in test_resp:
+                    if "Error" in test_resp or "offline" in test_resp.lower():
                         st.error(test_resp)
                     else:
                         st.success("Handshake Successful: AI Charlie is Responsive.")
