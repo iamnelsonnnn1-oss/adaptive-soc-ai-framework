@@ -1050,6 +1050,7 @@ def handle_chat_global():
     """Global handler for AI Charlie chat input."""
     query = st.session_state.ai_chatbot_input
     if query:
+        st.session_state.ai_charlie_state = "processing" # Set state to processing
         latest = st.session_state.get('threat_log', [{}])[0]
         forensics = latest.get('Forensics', {})
         enriched_context = f"Vector: {latest.get('Vector')}, Evidence: {json.dumps(forensics)}"
@@ -1057,6 +1058,7 @@ def handle_chat_global():
         ai_resp = ask_ai_charlie(query, enriched_context)
         st.session_state.chat_history.append({"user": query, "ai": ai_resp})
         st.session_state.ai_chatbot_input = "" 
+        st.session_state.ai_charlie_state = "idle" # Set state back to idle after response
 
 
 def render_ai_chatbot_interface(latest_threat_data: dict) -> None:
@@ -1064,11 +1066,17 @@ def render_ai_chatbot_interface(latest_threat_data: dict) -> None:
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// AI CHARLIE ANALYST</p>", unsafe_allow_html=True)
     
     # Placeholder for the 3D animated chatbot visual
-    st.image(logo_path, width=120, caption="AI Charlie (3D Analyst Active)")
-    
-    lottie_ai_charlie = load_lottie_url(LOTTIE_AI_CHARLIE_URL)
-    if lottie_ai_charlie:
-        st_lottie(lottie_ai_charlie, height=150, key="ai_charlie_lottie")
+    current_lottie_url = LOTTIE_AI_CHARLIE_IDLE_URL
+    if st.session_state.get("ai_charlie_state") == "processing":
+        current_lottie_url = LOTTIE_AI_CHARLIE_PROCESSING_URL
+
+    lottie_animation_data = load_lottie_url(current_lottie_url)
+    if lottie_animation_data:
+        st_lottie(lottie_animation_data, height=150, key="ai_charlie_lottie", speed=1, loop=True, quality="high")
+    else:
+        # Fallback to static image if Lottie fails to load
+        st.image(logo_path, width=120, caption="AI Charlie (3D Analyst Active)")
+
     st.markdown("<div style='height: 250px; overflow-y: auto; border: 1px solid rgba(0,255,0,0.2); padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.3);'>", unsafe_allow_html=True)
     if not st.session_state.chat_history:
         st.markdown("<p style='color:#777777; font-size:0.8rem;'>System initialized. Standing by for forensic inquiries...</p>", unsafe_allow_html=True)
@@ -1200,6 +1208,7 @@ def initialize_session_state() -> None:
         "aws_secret_key": st.secrets.get("AWS_SECRET_ACCESS_KEY", ""),
         "aws_region": st.secrets.get("AWS_DEFAULT_REGION", "eu-central-1"),
         "user_profile": None,
+        "ai_charlie_state": "idle", # Initial state for AI Charlie's animation
         "severity_filter": None,
         "aws_credentials_warning_shown": False # Track if AWS warning has been shown
     }
