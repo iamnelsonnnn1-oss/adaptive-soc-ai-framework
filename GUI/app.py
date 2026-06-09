@@ -1001,6 +1001,9 @@ def render_ai_analyst() -> None:
     if col_b.button("💡 HINT", key="hint_btn", use_container_width=True):
         st.session_state.show_hint = not st.session_state.show_hint; st.rerun()
 
+    # Sensitive Connection Bridges and Neural Link CMD inputs have been removed from the UI.
+    # They are now handled exclusively via Backend Secrets/ENV for security hardening.
+
     with st.sidebar.expander("🔍 CVE THREAT INTEL", expanded=False):
         cve_id = latest.get('CVE', 'N/A')
         if cve_id != 'N/A' and "XXXXX" not in cve_id:
@@ -1029,6 +1032,43 @@ def render_ai_analyst() -> None:
             else:
                 st.session_state.last_error = latest.get('DistractorExplanations', {}).get(action, "Incorrect protocol selection.")
                 st.rerun()
+
+
+def handle_chat_global():
+    """Global handler for AI Charlie chat input."""
+    query = st.session_state.ai_chatbot_input
+    if query:
+        latest = st.session_state.get('threat_log', [{}])[0]
+        forensics = latest.get('Forensics', {})
+        enriched_context = f"Vector: {latest.get('Vector')}, Evidence: {json.dumps(forensics)}"
+        
+        ai_resp = ask_ai_charlie(query, enriched_context)
+        st.session_state.chat_history.append({"user": query, "ai": ai_resp})
+        st.session_state.ai_chatbot_input = "" 
+
+
+def render_ai_chatbot_interface(latest_threat_data: dict) -> None:
+    """Renders the dedicated interface for the 3D animated AI Charlie chatbot."""
+    st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// AI CHARLIE ANALYST</p>", unsafe_allow_html=True)
+    
+    # Placeholder for the 3D animated chatbot visual
+    st.image(logo_path, width=120, caption="AI Charlie (3D Analyst Active)")
+
+    st.markdown("<div style='height: 250px; overflow-y: auto; border: 1px solid rgba(0,255,0,0.2); padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.3);'>", unsafe_allow_html=True)
+    if not st.session_state.chat_history:
+        st.markdown("<p style='color:#777777; font-size:0.8rem;'>System initialized. Standing by for forensic inquiries...</p>", unsafe_allow_html=True)
+    for chat in st.session_state.chat_history:
+        st.markdown(f"<p style='color:#FFFFFF; font-size:0.85rem; margin-bottom:5px;'><b>👤 You:</b> {chat['user']}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#00FF00; font-size:0.85rem; margin-bottom:15px; border-left: 2px solid #00FF00; padding-left: 10px;'><b>🤖 Charlie:</b> {chat['ai']}</p>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.text_input(
+        "NEURAL LINK COMMAND:", 
+        key="ai_chatbot_input", 
+        on_change=handle_chat_global, 
+        placeholder="Ask Charlie about this vector...",
+        help="Type your question and press Enter."
+    )
 
 
 def render_incident_ledger() -> None:
@@ -1268,6 +1308,9 @@ def main() -> None:
         
         with col_left:
             render_active_threats()
+            # Integrated AI Charlie Chatbot Suite
+            latest = threat_log[0] if threat_log else {}
+            render_ai_chatbot_interface(latest)
             
         with col_center:
             render_pipeline_status()
