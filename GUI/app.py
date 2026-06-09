@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 import time
 from google import genai
 import boto3
+from streamlit_lottie import st_lottie
 import plotly.express as px
 
 
@@ -147,6 +148,16 @@ def perform_system_hygiene() -> None:
         st.session_state.last_hygiene = time.time()
         st.sidebar.info("System Hygiene: Cache Optimized.")
 
+
+@st.cache_data(ttl=3600) # Cache Lottie animation for 1 hour
+def load_lottie_url(url: str):
+    r = requests.get(url)
+    if r.status_code != 200:
+        return None
+    return r.json()
+
+# Public Lottie animation URL for a robot/AI character
+LOTTIE_AI_CHARLIE_URL = "https://lottie.host/1709c00b-3316-430c-982d-2228549323d4/w0e4g30V7N.json"
 
 logo_path = os.path.join(os.path.dirname(__file__), "securex.png")
 if not os.path.exists(logo_path):
@@ -1053,7 +1064,10 @@ def render_ai_chatbot_interface(latest_threat_data: dict) -> None:
     
     # Placeholder for the 3D animated chatbot visual
     st.image(logo_path, width=120, caption="AI Charlie (3D Analyst Active)")
-
+    
+    lottie_ai_charlie = load_lottie_url(LOTTIE_AI_CHARLIE_URL)
+    if lottie_ai_charlie:
+        st_lottie(lottie_ai_charlie, height=150, key="ai_charlie_lottie")
     st.markdown("<div style='height: 250px; overflow-y: auto; border: 1px solid rgba(0,255,0,0.2); padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.3);'>", unsafe_allow_html=True)
     if not st.session_state.chat_history:
         st.markdown("<p style='color:#777777; font-size:0.8rem;'>System initialized. Standing by for forensic inquiries...</p>", unsafe_allow_html=True)

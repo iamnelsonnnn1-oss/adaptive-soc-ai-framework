@@ -4,3 +4,4 @@ pydeck
 google-genai
 boto3
 plotly
+streamlit-lottie
