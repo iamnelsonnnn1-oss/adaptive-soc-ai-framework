@@ -969,44 +969,31 @@ def render_ai_analyst() -> None:
     </div>
     """, unsafe_allow_html=True)
 
-    # Unified Connection Hub for Secrets or Sidebar input
-    with st.sidebar.expander("🔗 CONNECTION BRIDGES", expanded=not (ai_link and aws_link)):
-        st.text_input(
-            "Gemini API Key:", 
-            type="password", 
-            key="gemini_api_key",
-            help="Get a free key from https://aistudio.google.com/app/apikey"
-        )
-        st.text_input("AWS Access Key:", type="password", key="aws_access_key")
-        st.text_input("AWS Secret Key:", type="password", key="aws_secret_key")
-        st.text_input("AWS Region:", key="aws_region", placeholder="eu-central-1")
-        if st.button("REFRESH CONNECTIONS"):
-            st.cache_resource.clear()
-            st.rerun()
-
     def handle_chat():
         query = st.session_state.ai_chat_input
         if query:
             forensics = latest.get('Forensics', {})
             enriched_context = f"Vector: {latest.get('Vector')}, Evidence: {json.dumps(forensics)}"
             
-            ai_resp = ask_ai_charlie(query, enriched_context)
-            st.session_state.chat_history.append({"user": query, "ai": ai_resp})
-            st.session_state.ai_chat_input = ""
+            # AI chat input is now hidden, this function will not be triggered from UI
+            # Future 3D animated chatbot will handle input
+            pass
 
-    st.sidebar.text_input("NEURAL LINK CMD:", key="ai_chat_input", on_change=handle_chat, placeholder="Ask Charlie...")
+    # The AI chat input field is now hidden as per user request.
+    # st.sidebar.text_input("NEURAL LINK CMD:", key="ai_chat_input", on_change=handle_chat, placeholder="Ask Charlie...")
     
-    if not ai_link:
-        st.sidebar.warning("⚠️ Neural Link Key Missing. Connect via Secrets or Sidebar.")
-    else:
-        if st.sidebar.button("⚡ TEST NEURAL LINK", use_container_width=True):
-            with st.sidebar:
-                with st.spinner("Testing Link..."):
-                    test_resp = ask_ai_charlie("Perform a short systems check. Are you online?")
-                    if "Error" in test_resp or "offline" in test_resp.lower():
-                        st.error(test_resp)
-                    else:
-                        st.success("Handshake Successful: AI Charlie is Responsive.")
+    # The test button is also removed as it's tied to the manual input process.
+    # if not ai_link:
+    #     st.sidebar.warning("⚠️ Neural Link Key Missing. Connect via Secrets or Sidebar.")
+    # else:
+    #     if st.sidebar.button("⚡ TEST NEURAL LINK", use_container_width=True):
+    #         with st.sidebar:
+    #             with st.spinner("Testing Link..."):
+    #                 test_resp = ask_ai_charlie("Perform a short systems check. Are you online?")
+    #                 if "Error" in test_resp or "offline" in test_resp.lower():
+    #                     st.error(test_resp)
+    #                 else:
+    #                     st.success("Handshake Successful: AI Charlie is Responsive.")
 
     col_a, col_b = st.sidebar.columns(2)
     if col_a.button("📡 INTEL", key="intel_btn", use_container_width=True):
