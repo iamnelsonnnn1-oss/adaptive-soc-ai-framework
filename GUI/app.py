@@ -101,7 +101,7 @@ IR_PHASE_CHALLENGES = {
 }
 
 # --- AI ENGINE CONFIGURATION ---
-DEFAULT_GEMINI_MODEL = st.secrets.get("GEMINI_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-1.5-flash"
+DEFAULT_GEMINI_MODEL = st.secrets.get("GEMINI_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-3.5-flash"
 
 def get_gemini_api_key():
     """Cascading retrieval for Gemini API Key (Sidebar > Secrets > ENV)."""
