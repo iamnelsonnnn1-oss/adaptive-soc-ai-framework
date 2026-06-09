@@ -1049,9 +1049,10 @@ def render_ai_analyst() -> None:
 def handle_chat_global():
     """Global handler for AI Charlie chat input."""
     query = st.session_state.ai_chatbot_input
-    if query:
+    if query: # Only process if there's a query
         st.session_state.ai_charlie_state = "processing" # Set state to processing
-        latest = st.session_state.get('threat_log', [{}])[0]
+        threat_log = st.session_state.get('threat_log', [])
+        latest = threat_log[0] if threat_log else {} # Safely get latest threat context
         forensics = latest.get('Forensics', {})
         enriched_context = f"Vector: {latest.get('Vector')}, Evidence: {json.dumps(forensics)}"
         
@@ -1085,12 +1086,14 @@ def render_ai_chatbot_interface(latest_threat_data: dict) -> None:
         st.markdown(f"<p style='color:#00FF00; font-size:0.85rem; margin-bottom:15px; border-left: 2px solid #00FF00; padding-left: 10px;'><b>🤖 Charlie:</b> {chat['ai']}</p>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
+    has_active_threat = bool(latest_threat_data) # Check if there's a threat to discuss
     st.text_input(
         "NEURAL LINK COMMAND:", 
         key="ai_chatbot_input", 
         on_change=handle_chat_global, 
         placeholder="Ask Charlie about this vector...",
-        help="Type your question and press Enter."
+        help="Type your question and press Enter.",
+        disabled=not has_active_threat # Disable if no active threat
     )
 
 
