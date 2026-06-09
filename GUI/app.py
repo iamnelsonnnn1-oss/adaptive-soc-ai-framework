@@ -222,6 +222,21 @@ def inject_custom_css(breach_active: bool = False) -> None:
             margin-right: 12px;
             animation: pulse-green 1.8s infinite ease-in-out;
         }
+        
+        @keyframes pulse-red {
+            0% { transform: scale(0.98); opacity: 0.5; box-shadow: 0 0 4px #FF4B4B; }
+            50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 14px #FF4B4B; }
+            100% { transform: scale(0.98); opacity: 0.5; box-shadow: 0 0 4px #FF4B4B; }
+        }
+        .status-pulse-closed {
+            height: 10px;
+            width: 10px;
+            background-color: #FF4B4B;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 12px;
+            animation: pulse-red 1.8s infinite ease-in-out;
+        }
 
         .globe-texture { 
             animation: globe-spin """ + spin_speed + """ linear infinite !important; 
@@ -505,7 +520,8 @@ def render_ai_engine_telemetry() -> None:
 
 def render_active_threats() -> None:
     """Renders the live telemetry feed with safety scope checks."""
-    threat_log = st.session_state.get('threat_log', []) or []
+    # Only show non-closed threats in the live feed
+    threat_log = [t for t in st.session_state.get('threat_log', []) if t.get('Status') != 'Closed']
     
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem;'>// LIVE THREAT FEED</p>", unsafe_allow_html=True)
 
@@ -543,7 +559,8 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
     except:
         curr_lat, curr_lon = 51.5074, -0.1278
 
-    threat_log = st.session_state.get('threat_log', []) or []
+    # Display only active threats on the anomaly map
+    threat_log = [t for t in st.session_state.get('threat_log', []) if t.get('Status') != 'Closed']
     threats_df = pd.DataFrame(threat_log)
     
     view_lat = zoom_lat if zoom_lat else curr_lat
@@ -590,7 +607,8 @@ def render_anomaly_map(zoom_lat=None, zoom_lon=None) -> None:
 def render_threat_distribution() -> None:
     """Displays a donut chart of the threat severity distribution from the active log."""
     st.markdown("<p style='color: #FFFFFF; margin: 25px 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// THREAT SEVERITY DISTRIBUTION</p>", unsafe_allow_html=True)
-    threat_log = st.session_state.get("threat_log", [])
+    # Analyze only active threats for the distribution chart
+    threat_log = [t for t in st.session_state.get('threat_log', []) if t.get('Status') != 'Closed']
     
     if not threat_log:
         st.markdown("<p style='color: #777777; font-size: 0.8rem;'>NO DATA FOR DISTRIBUTION ANALYTICS.</p>", unsafe_allow_html=True)
@@ -794,7 +812,11 @@ def render_case_profile(case_data):
     st.write("")
     if st.button("← RETURN TO COMMAND CENTER", type="primary"):
         st.session_state.points += 10
-        st.session_state.threat_log = [t for t in st.session_state.threat_log if t.get('ID') != case_data.get('ID')]
+        # Update status in threat_log instead of removing to preserve it for the ledger
+        for t in st.session_state.threat_log:
+            if t.get('ID') == case_data.get('ID'):
+                t['Status'] = 'Closed'
+                break
         st.session_state.active_case = None
         if 'ai_report_feedback' in st.session_state: del st.session_state.ai_report_feedback
         st.rerun()
@@ -1055,15 +1077,22 @@ def render_incident_ledger() -> None:
         row_cols[3].markdown(f"<span style='color: #FFFFFF; font-size: 0.75rem; font-family: monospace;'>{t.get('Vector')}</span>", unsafe_allow_html=True)
         row_cols[4].markdown(f"<span style='color: #777777; font-size: 0.75rem; font-family: monospace;'>{t.get('MITRE')}</span>", unsafe_allow_html=True)
         
-        if row_cols[5].button("OPEN", key=f"ledger_btn_{t.get('ID')}", use_container_width=True):
-            st.session_state.remediation_target = t
-            st.rerun()
+        with row_cols[5]:
+            status = t.get("Status", "Active")
+            if status == "Closed":
+                st.markdown(f"<div style='display: flex; align-items: center; justify-content: center; height: 100%;'><span class='status-pulse-closed'></span><span style='color: #FF4B4B; font-size: 0.75rem; font-weight: bold; letter-spacing: 1px;'>CLOSED</span></div>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"<div style='display: flex; align-items: center; margin-bottom: 5px;'><span class='status-pulse-commander' style='height: 8px; width: 8px; margin-right: 5px;'></span><span style='color: #00FF00; font-size: 0.75rem; font-weight: bold;'>OPEN</span></div>", unsafe_allow_html=True)
+                if st.button("TRIAGE", key=f"ledger_btn_{t.get('ID')}", use_container_width=True):
+                    st.session_state.remediation_target = t
+                    st.rerun()
 
 
 def render_risk_dashboard() -> None:
     """Aggregated risk assessment mirroring Chronicle/Splunk SOC views."""
     st.markdown("<p style='color: #FFFFFF; margin: 0 0 10px 0; font-size: 0.7rem; letter-spacing: 2px;'>// COMMAND RISK ASSESSMENT</p>", unsafe_allow_html=True)
-    threat_log = st.session_state.get("threat_log", []) or []
+    # Only active (non-closed) threats contribute to the risk score
+    threat_log = [t for t in st.session_state.get('threat_log', []) if t.get('Status') != 'Closed']
     critical_count = len([t for t in threat_log if t.get('Severity') == 'Critical'])
     
     # Dynamic Scoring Logic
