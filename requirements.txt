@@ -3,3 +3,4 @@ pandas==2.2.3
 pydeck
 google-genai
 boto3
+plotly
