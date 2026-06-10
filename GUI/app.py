@@ -177,6 +177,15 @@ def main():
         st.button("🔍 ENRICH ARTIFACT", disabled=not has_data, use_container_width=True)
         st.button("📂 OPEN CASE", disabled=not has_data, use_container_width=True)
         
+        if st.button("📡 TEST NEURAL LINK", use_container_width=True):
+            ai_svc = get_ai_service()
+            with st.spinner("Initiating handshake..."):
+                success, message = ai_svc.check_connectivity()
+                if success:
+                    st.success(message)
+                else:
+                    st.error(message)
+        
         st.divider()
         # Integrated state-safe AI mentorship interface
         render_ai_chatbot_interface(threats[0] if threats else {})

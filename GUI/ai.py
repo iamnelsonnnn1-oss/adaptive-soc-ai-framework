@@ -15,6 +15,20 @@ class AICharlieService:
     def get_status(self):
         return "ONLINE" if self.client else "OFFLINE (DEGRADED)"
 
+    def check_connectivity(self):
+        """Performs a live handshake with Gemini to verify API key validity."""
+        if not self.client:
+            return False, "Client not initialized."
+        try:
+            # Send a minimal prompt to verify the link
+            self.client.models.generate_content(
+                model=DEFAULT_GEMINI_MODEL,
+                contents="Connectivity Test: Response 'OK' if active."
+            )
+            return True, "Handshake Successful: Neural Link Active."
+        except Exception as e:
+            return False, f"Handshake Failed: {str(e)}"
+
     def analyze_incident(self, query: str, context: str):
         if not self.client:
             return "AI Mentorship unavailable. Manual protocol suggested."
