@@ -25,3 +25,6 @@ __pycache__/
 
 GUI/secrets.toml
 .streamlit/secrets.toml
+
+GUI/secrets.toml
+.streamlit/secrets.toml
