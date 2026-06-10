@@ -27,7 +27,16 @@ class AICharlieService:
             )
             return True, "Handshake Successful: Neural Link Active."
         except Exception as e:
-            return False, f"Handshake Failed: {str(e)}"
+            error_msg = str(e).lower()
+            if "401" in error_msg or "api_key_invalid" in error_msg:
+                return False, "Handshake Failed: Invalid credential baseline."
+            if "429" in error_msg or "quota" in error_msg:
+                return False, "Handshake Failed: API rate limit active."
+            if "404" in error_msg or "not found" in error_msg:
+                return False, "Handshake Failed: Model target unavailable."
+            if "location" in error_msg:
+                return False, "Handshake Failed: Restricted regional access."
+            return False, "Handshake Failed: Secure engine disconnect."
 
     def analyze_incident(self, query: str, context: str):
         if not self.client:
