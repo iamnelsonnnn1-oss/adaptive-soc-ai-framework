@@ -28,9 +28,20 @@ class AICharlieService:
                 model=DEFAULT_GEMINI_MODEL,
                 contents=prompt
             )
-            return response.text if response.text else "Silent response from engine."
+            if response and hasattr(response, 'text') and response.text:
+                return response.text
+            return "Neural Link Error: Silent response from forensic engine."
         except Exception as e:
-            return f"Neural Link Error: {str(e)}"
+            error_msg = str(e).lower()
+            if "401" in error_msg or "api_key_invalid" in error_msg:
+                return "Neural Link Error: Invalid credential baseline."
+            if "429" in error_msg or "quota" in error_msg:
+                return "Neural Link Error: API rate limit active."
+            if "404" in error_msg or "not found" in error_msg:
+                return "Neural Link Error: Model target unavailable."
+            if "location" in error_msg:
+                return "Neural Link Error: Restricted regional access."
+            return "Neural Link Error: Secure engine disconnect."
 
 @st.cache_resource
 def get_ai_service():
