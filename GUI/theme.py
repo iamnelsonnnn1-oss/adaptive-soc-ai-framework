@@ -4,25 +4,28 @@ def inject_cockpit_css():
     """Injects aviation-grade ergonomics and visual hierarchy."""
     st.markdown("""
         <style>
-        /* Glass Cockpit Matte Foundation */
+        /* Darktrace-Inspired NDR Foundation */
         .stApp {
-            background-color: #020202 !important;
-            background-image: radial-gradient(circle at center, #0a0a0a 0%, #020202 100%) !important;
-            color: #E0E0E0 !important;
+            background-color: #00080B !important;
+            background-image: radial-gradient(circle at 50% 50%, #001A1F 0%, #00080B 100%) !important;
+            color: #D1F7FF !important;
             font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif !important;
         }
         
         /* Panel Framing */
         [data-testid="column"] {
-            background: rgba(10, 10, 10, 0.95) !important;
-            border: 1px solid rgba(0, 255, 0, 0.1) !important;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            background: rgba(0, 12, 15, 0.7) !important;
+            border: 1px solid rgba(0, 245, 255, 0.08) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             padding: 20px !important;
             border-radius: 4px;
-            transition: border 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
         [data-testid="column"]:hover {
-            border: 1px solid rgba(0, 255, 0, 0.3) !important;
+            border: 1px solid rgba(0, 245, 255, 0.3) !important;
+            box-shadow: 0 0 20px rgba(0, 245, 255, 0.1);
         }
 
         /* Instrumentation Typography */
@@ -35,9 +38,10 @@ def inject_cockpit_css():
         }
         
         .metric-value {
-            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 1.8rem;
-            color: #00FF00; /* Phosphor Green */
+            color: #00F5FF; /* Cyber Cyan */
+            text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
         }
 
         /* Master Caution Logic */
@@ -53,10 +57,10 @@ def inject_cockpit_css():
 
         /* Cockpit Switchgear (Buttons) */
         div.stButton > button {
-            background-color: #1A1A1A !important;
-            color: #FFFFFF !important;
-            border: 1px solid #333333 !important;
-            border-radius: 0px !important;
+            background-color: rgba(0, 245, 255, 0.03) !important;
+            color: #00F5FF !important;
+            border: 1px solid rgba(0, 245, 255, 0.2) !important;
+            border-radius: 2px !important;
             font-size: 0.7rem !important;
             letter-spacing: 1px;
             text-transform: uppercase;
@@ -64,15 +68,15 @@ def inject_cockpit_css():
             width: 100%;
         }
         div.stButton > button:hover {
-            border-color: #00FF00 !important;
-            color: #00FF00 !important;
-            background-color: #0A1A0A !important;
+            border-color: #00F5FF !important;
+            background-color: rgba(0, 245, 255, 0.1) !important;
+            box-shadow: 0 0 15px rgba(0, 245, 255, 0.2);
         }
 
         /* Flight Status Bar (Header) */
         .flight-status-bar {
-            background: rgba(0, 0, 0, 0.9);
-            border-bottom: 2px solid #333333;
+            background: rgba(0, 8, 11, 0.95);
+            border-bottom: 1px solid rgba(0, 245, 255, 0.2);
             padding: 10px 25px;
             margin-bottom: 20px;
             display: flex;
@@ -102,7 +106,7 @@ def inject_cockpit_css():
         .ingestion-online {
             height: 8px;
             width: 8px;
-            background-color: #00FF00;
+            background-color: #00F5FF;
             border-radius: 50%;
             display: inline-block;
             margin-right: 5px;
@@ -116,7 +120,7 @@ def inject_cockpit_css():
             background: #050505;
         }
         ::-webkit-scrollbar-thumb {
-            background: #00FF00;
+            background: #00F5FF;
             border-radius: 10px;
         }
 

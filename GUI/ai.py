@@ -16,7 +16,10 @@ class AICharlieService:
         return "ONLINE" if self.client else "OFFLINE (DEGRADED)"
 
     def check_connectivity(self):
-        """Performs a live handshake with Gemini to verify API key validity."""
+        """
+        Performs a live handshake with Gemini to verify API key validity.
+        This method is required by the switchgear console in app.py.
+        """
         if self.client is None:
             return False, "Client not initialized."
         try:

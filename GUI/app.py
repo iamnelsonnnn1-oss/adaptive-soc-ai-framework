@@ -173,7 +173,7 @@ def main():
                      caption="GEOSPATIAL ANOMALY MAP (SIMULATED)", use_container_width=True)
         
         st.markdown("<div class='metric-label'>// Detection Velocity</div>", unsafe_allow_html=True)
-        st.line_chart([10, 15, 8, 12, 5, 20], color="#00FF00")
+        st.line_chart([10, 15, 8, 12, 5, 20], color="#00F5FF")
 
     with col_console:
         st.markdown("<div class='metric-label'>// Switchgear & Action Rail</div>", unsafe_allow_html=True)
@@ -207,7 +207,7 @@ def main():
         time_str = t.get('Time', 'N/A')
         vector_str = t.get('Vector', 'Unknown Vector')
         source_str = t.get('Source', 'Unknown Source')
-        st.markdown(f"<div class='timeline-entry' style='color:#00FF00;'>[ {time_str} ] Detection: {vector_str} detected via {source_str}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='timeline-entry' style='color:#00F5FF;'>[ {time_str} ] Detection: {vector_str} detected via {source_str}</div>", unsafe_allow_html=True)
     st.markdown("<div class='timeline-entry'>[ 00:00:01 ] Cockpit initialized. Master systems online.</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
