@@ -28,6 +28,54 @@ def initialize_cockpit():
         st.session_state.points = 0
         st.session_state.assets_count = 1420  # Baseline monitored assets
         st.session_state.ingestion_health = "98.4%"
+        st.session_state.ai_charlie_state = "idle"
+
+def handle_chat_global():
+    """Global handler for AI Charlie chat input."""
+    query = st.session_state.get("ai_chatbot_input")
+    if not query:
+        return
+
+    st.session_state.ai_charlie_state = "processing"
+    try:
+        threat_log = st.session_state.get("threat_log", []) or []
+        latest = threat_log[0] if threat_log else {}
+        forensics = latest.get("Forensics", {})
+        enriched_context = (
+            f"Vector: {latest.get('Vector', 'No active threat')}, "
+            f"Evidence: {json.dumps(forensics)}"
+        )
+
+        ai_svc = get_ai_service()
+        ai_resp = ai_svc.analyze_incident(query, enriched_context)
+        st.session_state.chat_history.append({"user": query, "ai": ai_resp})
+        st.session_state.ai_chatbot_input = ""
+    finally:
+        st.session_state.ai_charlie_state = "idle"
+
+def render_ai_chatbot_interface(latest_threat_data: dict) -> None:
+    """Renders the dedicated interface for the AI Charlie chatbot."""
+    st.markdown("<div class='metric-label'>// AI Charlie Analyst</div>", unsafe_allow_html=True)
+    
+    # Console-style chat history view
+    st.markdown("<div style='height: 150px; overflow-y: auto; border: 1px solid rgba(0,255,0,0.1); padding: 10px; margin-bottom: 10px; font-family: monospace; font-size: 0.75rem; background: rgba(0,0,0,0.2);'>", unsafe_allow_html=True)
+    if not st.session_state.get("chat_history"):
+        st.markdown("<div style='color: #444;'>[ STANDBY ]</div>", unsafe_allow_html=True)
+    else:
+        for chat in st.session_state.chat_history[-5:]:
+            st.markdown(f"<div style='color: #888;'>USR: {chat['user']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color: #0F0; margin-bottom: 8px;'>AI: {chat['ai']}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    has_threat = bool(latest_threat_data)
+    st.text_input(
+        "NEURAL LINK COMMAND:",
+        key="ai_chatbot_input",
+        on_change=handle_chat_global,
+        placeholder="Ask Charlie about this vector..." if has_threat else "Inject a threat to start analysis...",
+        help="Type your question and press Enter.",
+        disabled=not has_threat,
+    )
 
 def render_cockpit_header():
     """TOP STRIP: Flight Status Bar."""
@@ -128,7 +176,10 @@ def main():
         st.button("⚡ ISOLATE HOST", disabled=not has_data, use_container_width=True)
         st.button("🔍 ENRICH ARTIFACT", disabled=not has_data, use_container_width=True)
         st.button("📂 OPEN CASE", disabled=not has_data, use_container_width=True)
-        st.button("🤖 AI ASSIST", disabled=not has_data, use_container_width=True)
+        
+        st.divider()
+        # Integrated state-safe AI mentorship interface
+        render_ai_chatbot_interface(threats[0] if threats else {})
         
         st.divider()
         st.markdown("<div class='metric-label'>// Cloud Link Status</div>", unsafe_allow_html=True)
