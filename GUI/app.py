@@ -1,11 +1,11 @@
 import streamlit as st
 from theme import inject_cockpit_css
-from settings import VERSION
+from settings import VERSION, URGENCY_MAP
 from ai import get_ai_service
+from telemetry import get_telemetry_service
+from risk import get_risk_service
 import time
 import pandas as pd
-import json
-import os
 import pydeck as pdk
 
 def initialize_cockpit():
@@ -80,10 +80,14 @@ def render_ai_chatbot_interface(latest_threat_data: dict) -> None:
 def render_cockpit_header():
     """TOP STRIP: Flight Status Bar."""
     ai_svc = get_ai_service()
-    # Master Alert Logic
-    threats = st.session_state.get('threat_log', [])
-    has_critical = any(t.get('Severity') == 'Critical' for t in threats)
-    alert_class = "alert-master" if has_critical else ""
+    telemetry_svc = get_telemetry_service()
+    risk_svc = get_risk_service()
+    
+    threats = telemetry_svc.get_active_threats()
+    posture = risk_svc.calculate_score(threats)
+    metrics = telemetry_svc.get_ingestion_metrics()
+    
+    alert_class = "alert-master" if posture['label'] == "MASTER CAUTION" else ""
     
     st.markdown(f"""
         <div class="flight-status-bar {alert_class}">
@@ -94,7 +98,7 @@ def render_cockpit_header():
             <div style="display:flex; gap:40px;">
                 <div style="text-align:center;">
                     <div class="metric-label">Ingestion Health</div>
-                    <div style="font-size:0.9rem; color:#00FF00;"><span class="ingestion-online"></span>{st.session_state.ingestion_health}</div>
+                    <div style="font-size:0.9rem; color:#00FF00;"><span class="ingestion-online"></span>{metrics['health_pct']}%</div>
                 </div>
                 <div style="text-align:center;">
                     <div class="metric-label">AI Analyst</div>
@@ -102,7 +106,7 @@ def render_cockpit_header():
                 </div>
                 <div style="text-align:center;">
                     <div class="metric-label">Posture Score</div>
-                    <div style="font-size:0.9rem; color:#00FF00;">GOLD</div>
+                    <div style="font-size:0.9rem; color:#00FF00;">{posture['rating']} ({posture['score']})</div>
                 </div>
             </div>
         </div>
@@ -114,16 +118,16 @@ def main():
     initialize_cockpit()
     
     render_cockpit_header()
+    
+    # Fetch live data from services
+    telemetry_svc = get_telemetry_service()
+    threats = telemetry_svc.get_active_threats()
 
     # --- COCKPIT 4-TIER GRID ---
-    # 1. Left: Threat Radar
-    # 2. Center: Tactical Glass (Wide)
-    # 3. Right: Action console
     col_radar, col_glass, col_console = st.columns([1, 2.5, 1])
 
     with col_radar:
         st.markdown("<div class='metric-label'>// Threat Radar (Active Vectors)</div>", unsafe_allow_html=True)
-        threats = st.session_state.get('threat_log', [])
         if not threats:
             st.markdown("<div class='radar-terminal' style='color:#777;'>[SCANNING SECTOR...]<br>No active vectors detected.</div>", unsafe_allow_html=True)
         else:
@@ -197,8 +201,11 @@ def main():
 
     st.divider()
     st.markdown("<div class='metric-label'>// Mission Timeline</div>", unsafe_allow_html=True)
-    for t in threats[:2]:
-        st.markdown(f"<div class='timeline-entry' style='color:#00FF00;'>[ {t['Time']} ] Detection: {t['Vector']} detected via {t['Source']}</div>", unsafe_allow_html=True)
+    for t in threats[:2]: # Display up to 2 latest threats
+        time_str = t.get('Time', 'N/A')
+        vector_str = t.get('Vector', 'Unknown Vector')
+        source_str = t.get('Source', 'Unknown Source')
+        st.markdown(f"<div class='timeline-entry' style='color:#00FF00;'>[ {time_str} ] Detection: {vector_str} detected via {source_str}</div>", unsafe_allow_html=True)
     st.markdown("<div class='timeline-entry'>[ 00:00:01 ] Cockpit initialized. Master systems online.</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
