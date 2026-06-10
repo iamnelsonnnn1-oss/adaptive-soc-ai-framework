@@ -6,17 +6,23 @@ def inject_cockpit_css():
         <style>
         /* Glass Cockpit Matte Foundation */
         .stApp {
-            background-color: #050505 !important;
+            background-color: #020202 !important;
+            background-image: radial-gradient(circle at center, #0a0a0a 0%, #020202 100%) !important;
             color: #E0E0E0 !important;
             font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif !important;
         }
         
         /* Panel Framing */
         [data-testid="column"] {
-            background: rgba(15, 15, 15, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 15px !important;
-            border-radius: 2px;
+            background: rgba(10, 10, 10, 0.95) !important;
+            border: 1px solid rgba(0, 255, 0, 0.1) !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            padding: 20px !important;
+            border-radius: 4px;
+            transition: border 0.3s ease;
+        }
+        [data-testid="column"]:hover {
+            border: 1px solid rgba(0, 255, 0, 0.3) !important;
         }
 
         /* Instrumentation Typography */
@@ -29,7 +35,7 @@ def inject_cockpit_css():
         }
         
         .metric-value {
-            font-family: 'Courier New', monospace;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
             font-size: 1.8rem;
             color: #00FF00; /* Phosphor Green */
         }
@@ -65,7 +71,7 @@ def inject_cockpit_css():
 
         /* Flight Status Bar (Header) */
         .flight-status-bar {
-            background: #000000;
+            background: rgba(0, 0, 0, 0.9);
             border-bottom: 2px solid #333333;
             padding: 10px 25px;
             margin-bottom: 20px;
@@ -101,5 +107,18 @@ def inject_cockpit_css():
             display: inline-block;
             margin-right: 5px;
         }
+
+        /* Custom Scrollbar for Analyst Terminal */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00FF00;
+            border-radius: 10px;
+        }
+
         </style>
     """, unsafe_allow_html=True)

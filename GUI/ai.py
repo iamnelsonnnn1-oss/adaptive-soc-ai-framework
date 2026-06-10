@@ -17,7 +17,7 @@ class AICharlieService:
 
     def check_connectivity(self):
         """Performs a live handshake with Gemini to verify API key validity."""
-        if not self.client:
+        if self.client is None:
             return False, "Client not initialized."
         try:
             # Send a minimal prompt to verify the link
