@@ -180,7 +180,112 @@ def render_dashboard() -> None:
     render_cockpit_header(threats, posture, metrics, ai_status)
     render_kpi_row(threats, posture, metrics, ai_status)
 
-    st.info("Phase 1A dashboard rebuild in progress.")
+    st.write("")
+    col_main, col_side = st.columns([2.5, 1])
+
+    with col_main:
+        st.markdown("<div class='metric-label'>// Geospatial Threat Distribution</div>", unsafe_allow_html=True)
+
+        if not threats:
+            st.info("Scanning for geospatial anomalies...")
+
+        df = pd.DataFrame(threats)
+        if not df.empty:
+            view_state = pdk.ViewState(latitude=30, longitude=0, zoom=1, pitch=45)
+            layer = pdk.Layer(
+                "ScatterplotLayer",
+                df,
+                get_position=["lon", "lat"],
+                get_color="[0, 245, 255, 160]",
+                get_radius=200000,
+            )
+            st.pydeck_chart(
+                pdk.Deck(
+                    layers=[layer],
+                    initial_view_state=view_state,
+                    map_style="mapbox://styles/mapbox/dark-v9",
+                )
+            )
+        else:
+            st.empty()
+
+    with col_side:
+        render_ai_chatbot_interface(threats[0] if threats else {})
+        st.write("")
+        st.markdown("<div class='metric-label'>// System Controls</div>", unsafe_allow_html=True)
+
+        has_data = len(threats) > 0
+        st.button("⚡ ISOLATE HOST", disabled=not has_data, use_container_width=True)
+        st.button("🔍 ENRICH ARTIFACT", disabled=not has_data, use_container_width=True)
+        st.button("📂 OPEN CASE", disabled=not has_data, use_container_width=True)
+
+        if st.button("🚨 SYSTEM BREACH", use_container_width=True):
+            scenario_svc = get_scenario_service()
+            new_inc = scenario_svc.generate_incident()
+            st.session_state.threat_log.insert(0, new_inc)
+            st.session_state.last_sim_tick = time.time()
+            st.rerun()
+
+        if st.button("📡 TEST NEURAL LINK", use_container_width=True):
+            with st.spinner("Handshake..."):
+                success, message = ai_svc.check_connectivity()
+                if success:
+                    st.success(message)
+                else:
+                    st.error(message)
+
+        st.divider()
+        st.markdown("<div class='metric-label'>// Cloud Link Status</div>", unsafe_allow_html=True)
+
+        aws_key = st.secrets.get("AWS_ACCESS_KEY_ID", "")
+        aws_status = "SECURE" if aws_key else "UNLINKED"
+        st.write(f"AWS EU-CENTRAL-1: {aws_status}")
+
+    st.divider()
+    col_radar, col_timeline = st.columns([1, 1.5])
+
+    with col_radar:
+        st.markdown("<div class='metric-label'>// Threat Radar (Live Vectors)</div>", unsafe_allow_html=True)
+
+        if not threats:
+            st.markdown(
+                "<div class='radar-terminal' style='color:#777;'>[SCANNING...] No vectors detected.</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            radar_html = "".join(
+                [
+                    (
+                        f"<div style='margin-bottom:8px; "
+                        f"border-left:2px solid {URGENCY_MAP.get(t.get('Severity', 'Low'), {}).get('color', '#00F5FF')}; "
+                        "padding-left:10px;'>"
+                        f"<span style='color:{URGENCY_MAP.get(t.get('Severity', 'Low'), {}).get('color', '#00F5FF')}; "
+                        "font-size:0.6rem;'>"
+                        f"{t.get('Severity', '').upper()}</span><br>"
+                        f"<span style='color:#EEE; font-size:0.75rem;'>{t.get('Vector', '')}</span>"
+                        "</div>"
+                    )
+                    for t in threats[:5]
+                ]
+            )
+            st.markdown(f"<div class='radar-terminal'>{radar_html}</div>", unsafe_allow_html=True)
+
+    with col_timeline:
+        st.markdown("<div class='metric-label'>// Mission Timeline</div>", unsafe_allow_html=True)
+
+        for t in threats[:3]:
+            color = URGENCY_MAP.get(t.get("Severity", "Low"), {}).get("color", "#00F5FF")
+            st.markdown(
+                f"<div class='timeline-entry' style='color:{color};'>"
+                f"[ {t.get('Time', 'N/A')} ] {t.get('Vector', 'Unknown')} detected."
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(
+            "<div class='timeline-entry'>[ 00:00:01 ] Systems Operational.</div>",
+            unsafe_allow_html=True,
+        )
 
 
 def main() -> None:
