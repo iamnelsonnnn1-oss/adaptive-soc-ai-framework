@@ -1,351 +1,88 @@
-import json
-import os
-import sys
-import time
-
-# Manually inject the local directory into sys.path to ensure module
-# resolution (theme, settings, services) works correctly on Streamlit Cloud.
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-import pandas as pd
-import pydeck as pdk
 import streamlit as st
 
-from ai import get_ai_service
-from risk import get_risk_service
-from scenarios import get_scenario_service
-from settings import VERSION, URGENCY_MAP
-from telemetry import get_telemetry_service
-from theme import inject_cockpit_css
+st.set_page_config(
+    page_title="SECUREX Maintenance",
+    page_icon="🛠️",
+    layout="wide",
+)
 
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #020202;
+        color: #EAEAEA;
+        font-family: Arial, sans-serif;
+    }
+    .wrap {
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .card {
+        width: 100%;
+        max-width: 800px;
+        background: rgba(10, 10, 10, 0.92);
+        border: 1px solid rgba(0, 245, 255, 0.18);
+        border-radius: 12px;
+        padding: 40px 32px;
+        box-shadow: 0 0 30px rgba(0, 245, 255, 0.08);
+        text-align: center;
+    }
+    .eyebrow {
+        color: #00F5FF;
+        font-size: 0.8rem;
+        letter-spacing: 0.18rem;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+    .title {
+        font-size: 2.4rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: #FFFFFF;
+    }
+    .body {
+        font-size: 1.05rem;
+        line-height: 1.7;
+        color: #B8B8B8;
+        margin-bottom: 24px;
+    }
+    .badge {
+        display: inline-block;
+        padding: 10px 16px;
+        border: 1px solid #FFBF00;
+        border-radius: 999px;
+        color: #FFBF00;
+        background: rgba(255, 191, 0, 0.08);
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    .foot {
+        margin-top: 24px;
+        color: #777;
+        font-size: 0.9rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-def initialize_cockpit() -> None:
-    """Initialize baseline Streamlit session state for the cockpit."""
-    if "cockpit_init" in st.session_state:
-        return
-
-    st.session_state.cockpit_init = True
-
-    base_path = os.path.dirname(__file__)
-    telemetry_file = os.path.join(base_path, "telemetry.json")
-
-    if os.path.exists(telemetry_file):
-        try:
-            with open(telemetry_file, "r", encoding="utf-8") as f:
-                st.session_state.threat_log = json.load(f)
-        except Exception:
-            st.session_state.threat_log = []
-    else:
-        st.session_state.threat_log = []
-
-    st.session_state.chat_history = []
-    st.session_state.points = 0
-    st.session_state.assets_count = 1420
-    st.session_state.ingestion_health = "98.4%"
-    st.session_state.ai_charlie_state = "idle"
-    st.session_state.sim_active = False
-    st.session_state.last_sim_tick = time.time()
-    st.session_state.sim_interval = 60
-
-
-def handle_chat_global() -> None:
-    """Handle AI Charlie input submission from session state."""
-    query = st.session_state.get("ai_chatbot_input")
-    if not query:
-        return
-
-    st.session_state.ai_charlie_state = "processing"
-    try:
-        threat_log = st.session_state.get("threat_log", []) or []
-        latest = threat_log[0] if threat_log else {}
-        forensics = latest.get("Forensics", {})
-        enriched_context = (
-            f"Vector: {latest.get('Vector', 'No active threat')}, "
-            f"Evidence: {json.dumps(forensics)}"
-        )
-
-        ai_svc = get_ai_service()
-        ai_resp = ai_svc.analyze_incident(query, enriched_context)
-
-        st.session_state.chat_history.append(
-            {"user": query, "ai": ai_resp}
-        )
-        st.session_state.ai_chatbot_input = ""
-    finally:
-        st.session_state.ai_charlie_state = "idle"
-
-
-def render_ai_chatbot_interface(latest_threat_data: dict) -> None:
-    """Render the AI Charlie analyst panel."""
-    st.markdown("<div class='metric-label'>// AI Charlie Analyst</div>", unsafe_allow_html=True)
-
-    st.markdown(
-        (
-            "<div style='height: 150px; overflow-y: auto; "
-            "border: 1px solid rgba(0,255,0,0.1); padding: 10px; "
-            "margin-bottom: 10px; font-family: monospace; "
-            "font-size: 0.75rem; background: rgba(0,0,0,0.2);'>"
-        ),
-        unsafe_allow_html=True,
-    )
-
-    if not st.session_state.get("chat_history"):
-        st.markdown("<div style='color: #444;'>[ STANDBY ]</div>", unsafe_allow_html=True)
-    else:
-        for chat in st.session_state.chat_history[-5:]:
-            st.markdown(f"<div style='color: #888;'>USR: {chat['user']}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color: #0F0; margin-bottom: 8px;'>AI: {chat['ai']}</div>", unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    has_threat = bool(latest_threat_data)
-    st.text_input(
-        "NEURAL LINK COMMAND:",
-        key="ai_chatbot_input",
-        on_change=handle_chat_global,
-        placeholder="Ask Charlie about this vector..." if has_threat else "Inject a threat to start analysis...",
-        help="Type your question and press Enter.",
-        disabled=not has_threat,
-    )
-
-
-def render_cockpit_header(threats: list, posture: dict, metrics: dict, ai_status: str) -> None:
-    """Render the top flight-status strip."""
-    alert_class = "alert-master" if posture.get("label") == "MASTER ALERT" else ""
-
-    st.markdown(
-        f"""
-        <div class="flight-status-bar {alert_class}">
-            <div style="display:flex; align-items:center;">
-                <span style="color:#00FF00; font-weight:900; letter-spacing:3px; font-size:1.2rem;">
-                    SECUREX COCKPIT
-                </span>
-                <span style="color:#555; margin-left:15px; font-size:0.7rem;">v{VERSION}</span>
-            </div>
-            <div style="display:flex; gap:40px;">
-                <div style="text-align:center;">
-                    <div class="metric-label">Active Incidents</div>
-                    <div style="font-size:0.9rem; color:#FF4B4B; font-weight:bold;">{len(threats)}</div>
-                </div>
-                <div style="text-align:center;">
-                    <div class="metric-label">Alert Velocity</div>
-                    <div style="font-size:0.9rem; color:#00F5FF;">12/hr</div>
-                </div>
-                <div style="text-align:center;">
-                    <div class="metric-label">Ingestion Health</div>
-                    <div style="font-size:0.9rem; color:#00F5FF;">
-                        <span class="ingestion-online"></span>{metrics.get('health_pct')}%
-                    </div>
-                </div>
-                <div style="text-align:center;">
-                    <div class="metric-label">Readiness</div>
-                    <div style="font-size:0.9rem; color:#00F5FF;">{ai_status}</div>
-                </div>
-                <div style="text-align:center;">
-                    <div class="metric-label">System Posture</div>
-                    <div style="font-size:0.9rem; color:#00F5FF;">
-                        {posture.get('rating')} [{posture.get('score')}]
-                    </div>
-                </div>
-            </div>
+st.markdown(
+    """
+    <div class="wrap">
+      <div class="card">
+        <div class="eyebrow">SECUREX STATUS</div>
+        <div class="title">SecureX is under maintenance</div>
+        <div class="body">
+          We are currently performing updates and stabilization work.<br>
+          The platform will be back online soon.
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def render_kpi_row(threats: list, posture: dict, metrics: dict, ai_status: str) -> None:
-    """Render top-level KPI cards."""
-    critical_count = len([t for t in threats if t.get("Severity") == "Critical"])
-
-    k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("ACTIVE INCIDENTS", len(threats))
-    k2.metric("CRITICAL ALERTS", critical_count)
-    k3.metric("POSTURE SCORE", f"{posture.get('score')}%", posture.get("rating"))
-    k4.metric("INGESTION", f"{metrics.get('health_pct')}%", metrics.get("status"))
-    k5.metric("AI READINESS", ai_status)
-
-
-def render_dashboard() -> None:
-    """Render the main dashboard view."""
-    telemetry_svc = get_telemetry_service()
-    risk_svc = get_risk_service()
-    ai_svc = get_ai_service()
-
-    threats = telemetry_svc.get_active_threats(st.session_state.get("threat_log", []))
-    posture = risk_svc.calculate_score(threats)
-    metrics = telemetry_svc.get_ingestion_metrics()
-    ai_status = ai_svc.get_status()
-
-    render_cockpit_header(threats, posture, metrics, ai_status)
-    render_kpi_row(threats, posture, metrics, ai_status)
-
-    st.write("")
-    col_main, col_side = st.columns([2.5, 1])
-
-    with col_main:
-        st.markdown("<div class='metric-label'>// Geospatial Threat Distribution</div>", unsafe_allow_html=True)
-
-        if not threats:
-            st.info("Scanning for geospatial anomalies...")
-
-        df = pd.DataFrame(threats)
-        if not df.empty:
-            view_state = pdk.ViewState(latitude=30, longitude=0, zoom=1, pitch=45)
-            layer = pdk.Layer(
-                "ScatterplotLayer",
-                df,
-                get_position=["lon", "lat"],
-                get_color="[0, 245, 255, 160]",
-                get_radius=200000,
-            )
-            st.pydeck_chart(
-                pdk.Deck(
-                    layers=[layer],
-                    initial_view_state=view_state,
-                    map_style="mapbox://styles/mapbox/dark-v9",
-                )
-            )
-        else:
-            st.empty()
-
-    with col_side:
-        render_ai_chatbot_interface(threats[0] if threats else {})
-        st.write("")
-        st.markdown("<div class='metric-label'>// System Controls</div>", unsafe_allow_html=True)
-
-        has_data = len(threats) > 0
-        st.button("⚡ ISOLATE HOST", disabled=not has_data, use_container_width=True)
-        st.button("🔍 ENRICH ARTIFACT", disabled=not has_data, use_container_width=True)
-        st.button("📂 OPEN CASE", disabled=not has_data, use_container_width=True)
-
-        if st.button("🚨 SYSTEM BREACH", use_container_width=True):
-            scenario_svc = get_scenario_service()
-            new_inc = scenario_svc.generate_incident()
-            st.session_state.threat_log.insert(0, new_inc)
-            st.session_state.last_sim_tick = time.time()
-            st.rerun()
-
-        if st.button("📡 TEST NEURAL LINK", use_container_width=True):
-            with st.spinner("Handshake..."):
-                success, message = ai_svc.check_connectivity()
-                if success:
-                    st.success(message)
-                else:
-                    st.error(message)
-
-        st.divider()
-        st.markdown("<div class='metric-label'>// Cloud Link Status</div>", unsafe_allow_html=True)
-
-        aws_key = st.secrets.get("AWS_ACCESS_KEY_ID", "")
-        aws_status = "SECURE" if aws_key else "UNLINKED"
-        st.write(f"AWS EU-CENTRAL-1: {aws_status}")
-
-    st.divider()
-    col_radar, col_timeline = st.columns([1, 1.5])
-
-    with col_radar:
-        st.markdown("<div class='metric-label'>// Threat Radar (Live Vectors)</div>", unsafe_allow_html=True)
-
-        if not threats:
-            st.markdown(
-                "<div class='radar-terminal' style='color:#777;'>[SCANNING...] No vectors detected.</div>",
-                unsafe_allow_html=True,
-            )
-        else:
-            radar_html = "".join(
-                [
-                    (
-                        f"<div style='margin-bottom:8px; "
-                        f"border-left:2px solid {URGENCY_MAP.get(t.get('Severity', 'Low'), {}).get('color', '#00F5FF')}; "
-                        "padding-left:10px;'>"
-                        f"<span style='color:{URGENCY_MAP.get(t.get('Severity', 'Low'), {}).get('color', '#00F5FF')}; "
-                        "font-size:0.6rem;'>"
-                        f"{t.get('Severity', '').upper()}</span><br>"
-                        f"<span style='color:#EEE; font-size:0.75rem;'>{t.get('Vector', '')}</span>"
-                        "</div>"
-                    )
-                    for t in threats[:5]
-                ]
-            )
-            st.markdown(f"<div class='radar-terminal'>{radar_html}</div>", unsafe_allow_html=True)
-
-    with col_timeline:
-        st.markdown("<div class='metric-label'>// Mission Timeline</div>", unsafe_allow_html=True)
-
-        for t in threats[:3]:
-            color = URGENCY_MAP.get(t.get("Severity", "Low"), {}).get("color", "#00F5FF")
-            st.markdown(
-                f"<div class='timeline-entry' style='color:{color};'>"
-                f"[ {t.get('Time', 'N/A')} ] {t.get('Vector', 'Unknown')} detected."
-                "</div>",
-                unsafe_allow_html=True,
-            )
-
-        st.markdown(
-            "<div class='timeline-entry'>[ 00:00:01 ] Systems Operational.</div>",
-            unsafe_allow_html=True,
-        )
-
-
-def main() -> None:
-    st.set_page_config(page_title="SECUREX Cyber Range", layout="wide", page_icon="🛡️")
-    inject_cockpit_css()
-    initialize_cockpit()
-
-    with st.sidebar:
-        logo_path = os.path.join(os.path.dirname(__file__), "securex.png")
-        if not os.path.exists(logo_path):
-            logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
-
-        if os.path.exists(logo_path):
-            st.image(logo_path, width=150)
-
-        st.markdown(
-            "<p style='text-align: center; color: #777;'>SECUREX COMMAND v3.0</p>",
-            unsafe_allow_html=True,
-        )
-
-        nav = st.radio(
-            "NAVIGATION",
-            [
-                "Dashboard",
-                "Incident Queue",
-                "Triage Console",
-                "Playbooks / SOAR",
-                "AI Threat Lab",
-                "Research",
-                "Scenario Control",
-            ],
-        )
-
-        st.divider()
-
-        st.session_state.sim_active = st.toggle(
-            "Simulation Mode",
-            value=st.session_state.sim_active,
-        )
-
-        if st.session_state.sim_active:
-            scenario_svc = get_scenario_service()
-            t_minus = scenario_svc.get_simulation_status(
-                st.session_state.last_sim_tick,
-                st.session_state.sim_interval,
-            )
-            st.metric("T-MINUS NEXT BREACH", f"{t_minus}s")
-
-            if t_minus <= 0:
-                new_inc = scenario_svc.generate_incident()
-                st.session_state.threat_log.insert(0, new_inc)
-                st.session_state.last_sim_tick = time.time()
-                st.rerun()
-
-    if nav == "Dashboard":
-        render_dashboard()
-    else:
-        st.title(f"// {nav}")
-        st.info(f"The {nav} module is scheduled for implementation in the next phase.")
-
-
-if __name__ == "__main__":
-    main()
+        <div class="badge">Scheduled Maintenance In Progress</div>
+        <div class="foot">Thank you for your patience.</div>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
