@@ -17,6 +17,10 @@
 # Python
 __pycache__/
 *.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
 
 1_Infrastructure_IaC/Kubernetes/apps/soc-demo-service/secrets/
 

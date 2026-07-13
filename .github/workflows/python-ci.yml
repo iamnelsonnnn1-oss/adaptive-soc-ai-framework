@@ -1,0 +1,47 @@
+name: Python CI
+
+on:
+  push:
+    paths:
+      - ".github/workflows/python-ci.yml"
+      - "GUI/**"
+      - "1_Infrastructure_IaC/Docker/soc-demo-service/**"
+      - "requirements.txt"
+      - "requirements-dev.txt"
+      - "pytest.ini"
+  pull_request:
+    paths:
+      - ".github/workflows/python-ci.yml"
+      - "GUI/**"
+      - "1_Infrastructure_IaC/Docker/soc-demo-service/**"
+      - "requirements.txt"
+      - "requirements-dev.txt"
+      - "pytest.ini"
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run unit tests with coverage
+        run: |
+          python -m pytest \
+            --cov=GUI \
+            --cov=1_Infrastructure_IaC/Docker/soc-demo-service/app \
+            --cov-report=term-missing
