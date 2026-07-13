@@ -1,5 +1,6 @@
 from google import genai
 from settings import get_gemini_api_key, DEFAULT_GEMINI_MODEL
+from gemini_utils import classify_api_error
 import streamlit as st
 
 class AICharlieService:
@@ -30,16 +31,7 @@ class AICharlieService:
             )
             return True, "Handshake Successful: Neural Link Active."
         except Exception as e:
-            error_msg = str(e).lower()
-            if "401" in error_msg or "api_key_invalid" in error_msg:
-                return False, "Handshake Failed: Invalid credential baseline."
-            if "429" in error_msg or "quota" in error_msg:
-                return False, "Handshake Failed: API rate limit active."
-            if "404" in error_msg or "not found" in error_msg:
-                return False, "Handshake Failed: Model target unavailable."
-            if "location" in error_msg:
-                return False, "Handshake Failed: Restricted regional access."
-            return False, "Handshake Failed: Secure engine disconnect."
+            return False, f"Handshake Failed: {classify_api_error(e)}"
 
     def analyze_incident(self, query: str, context: str):
         if not self.client:
@@ -58,16 +50,7 @@ class AICharlieService:
                 return response.text
             return "Neural Link Error: Silent response from forensic engine."
         except Exception as e:
-            error_msg = str(e).lower()
-            if "401" in error_msg or "api_key_invalid" in error_msg:
-                return "Neural Link Error: Invalid credential baseline."
-            if "429" in error_msg or "quota" in error_msg:
-                return "Neural Link Error: API rate limit active."
-            if "404" in error_msg or "not found" in error_msg:
-                return "Neural Link Error: Model target unavailable."
-            if "location" in error_msg:
-                return "Neural Link Error: Restricted regional access."
-            return "Neural Link Error: Secure engine disconnect."
+            return f"Neural Link Error: {classify_api_error(e)}"
 
 @st.cache_resource
 def get_ai_service():
