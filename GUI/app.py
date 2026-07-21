@@ -366,7 +366,7 @@ def render_header(threats: list[dict]) -> None:
             logo_b64 = base64.b64encode(logo_file.read()).decode("utf-8")
         logo_html = (
             f'<img src="data:image/png;base64,{logo_b64}" alt="SECUREX logo" '
-            'style="height:34px;width:auto;display:block;" />'
+            'style="height:58px;width:auto;display:block;" />'
         )
     st.markdown(
         f"""
