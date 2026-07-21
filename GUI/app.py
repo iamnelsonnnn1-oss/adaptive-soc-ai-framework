@@ -55,6 +55,19 @@ STACK = [
     ("Google SecOps", "SIEM"),
 ]
 
+KAI_SYSTEM_PROMPT = """You are AI Security Analyst Kai, the real-time mentor embedded in the SECUREX COMMAND cyber range. Your role is to guide users through identifying, classifying, and triaging every Threat in the system.
+
+For any user question or selected threat, you must:
+1. CLASSIFY: Identify the threat type and map it to the MITRE ATT&CK tactic (e.g. TA0001 Initial Access, TA0006 Credential Access, TA0004 Privilege Escalation, TA0008 Lateral Movement, TA0009 Collection, TA0010 Exfiltration, TA0011 Command & Control, TA0040 Impact).
+2. EXPLAIN THE WHY: In plain language a student can learn from, explain why this threat matters, what an attacker is attempting, and what business impact it carries.
+3. MAP TO NIST: Map the recommended response to the NIST Cybersecurity Framework functions — Identify, Protect, Detect, Respond, Recover.
+4. REMEDIATE: Give 2-3 concrete, ordered next remediation steps the analyst should take.
+5. ENCOURAGE: Close with a brief note on what the analyst just learned or a tip to improve detection going forward.
+
+You have read access to the Threat entity. When a user asks about the threat landscape, list and summarize the active threats, calling out severity, category, source, target asset, MITRE tactic, confidence, and NIST function. Prioritize critical and high-severity signals.
+
+Tone: calm, tactical, precise, encouraging. Speak like an experienced SOC lead walking a junior analyst through their shift. Use short headers and structure. Never fabricate data that is not in the Threat entity or the user's message — if you do not know, say so and recommend enrichment."""
+
 
 def _safe_secret(name: str):
     try:
@@ -221,6 +234,25 @@ def get_filtered_sorted_threats() -> list[dict]:
     return sorted(subset, key=lambda t: t["detected_at"], reverse=False)
 
 
+def summarize_active_threats() -> str:
+    active = [t for t in st.session_state.threats if t["status"] not in {"remediated", "closed"}]
+    ordered = sorted(
+        active,
+        key=lambda t: (0 if t["severity"] == "critical" else 1 if t["severity"] == "high" else 2, t["detected_at"]),
+    )
+    if not ordered:
+        return "No active threats currently in the Threat entity."
+    lines = []
+    for threat in ordered[:8]:
+        lines.append(
+            f"- {threat['id']} | sev={threat['severity']} | category={threat['category']} | "
+            f"source={threat['source_ip']} | target={threat['target_asset']} | "
+            f"mitre={threat['mitre_tactic']} | confidence={threat['confidence_score']} | "
+            f"nist={threat['nist_function']}"
+        )
+    return "\n".join(lines)
+
+
 def get_selected_threat() -> dict | None:
     selected_id = st.session_state.get("selected_threat_id")
     for threat in st.session_state.threats:
@@ -385,7 +417,27 @@ def render_detail_panel(threat: dict | None) -> None:
 
 def kai_response(query: str, threat: dict | None) -> str:
     if threat is None:
-        return "No threat selected. Pick one from the feed and retry."
+        return (
+            "### Threat Classification\n"
+            "- No threat is currently selected.\n\n"
+            "### Why This Matters\n"
+            "- Triage quality depends on specific threat telemetry context.\n\n"
+            "### NIST Mapping\n"
+            "- Start in Identify/Detect by selecting a threat and validating signal confidence.\n\n"
+            "### Next Remediation Steps\n"
+            "1. Select a threat from the feed.\n"
+            "2. Review source/target/tactic details.\n"
+            "3. Execute the workflow checklist.\n\n"
+            "### Analyst Growth Tip\n"
+            "- Great analysts always tie response actions to concrete evidence."
+        )
+    if "threat landscape" in query.lower() or "active threats" in query.lower():
+        return (
+            "### Active Threat Landscape\n"
+            f"{summarize_active_threats()}\n\n"
+            "### Analyst Growth Tip\n"
+            "- Prioritize critical and high-severity cases first, then confirm containment evidence."
+        )
     return (
         "### 1) Threat Classification\n"
         f"- Type: {threat['category']}\n"
@@ -419,6 +471,14 @@ def render_kai_panel(threat: dict | None) -> None:
 
 
 def _fallback_public_chat_response(prompt: str, threat: dict | None) -> str:
+    if "threat landscape" in prompt.lower() or "active threats" in prompt.lower():
+        return (
+            "### Active Threat Landscape\n"
+            f"{summarize_active_threats()}\n\n"
+            "### Analyst Growth Tip\n"
+            "- Build a repeatable triage sequence: classify, contain, validate, and document."
+        )
+
     context = ""
     if threat:
         context = (
@@ -450,12 +510,12 @@ def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
             f"Case={threat['id']}, Severity={threat['severity']}, "
             f"Tactic={threat['mitre_tactic']}, Target={threat['target_asset']}, Status={threat['status']}"
         )
+    threat_landscape = summarize_active_threats()
     full_prompt = (
-        "You are AI Security Analyst Kai for the SecureX Command public SOC simulator. "
-        "Be concise, tactical, and educational. Provide practical SOC guidance. "
-        "When relevant, include MITRE ATT&CK and NIST CSF mapping.\n"
-        f"Context: {context}\n"
-        f"User question: {prompt}"
+        f"{KAI_SYSTEM_PROMPT}\n\n"
+        f"Threat entity (active summary):\n{threat_landscape}\n\n"
+        f"Selected threat context: {context}\n"
+        f"User question: {prompt}\n"
     )
     client = genai.Client(api_key=api_key)
     try:
