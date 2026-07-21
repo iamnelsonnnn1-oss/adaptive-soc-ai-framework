@@ -55,7 +55,7 @@ STACK = [
     ("Google SecOps", "SIEM"),
 ]
 
-KAI_SYSTEM_PROMPT = """You are Security Analyst Kai, the real-time mentor embedded in the SECUREX COMMAND cyber range. Your role is to guide users through identifying, classifying, and triaging every Threat in the system.
+KAI_SYSTEM_PROMPT = """You are AI Security Analyst Kai, the real-time mentor embedded in the SECUREX COMMAND cyber range. Your role is to guide users through identifying, classifying, and triaging every Threat in the system.
 
 For any user question or selected threat, you must:
 1. CLASSIFY: Identify the threat type and map it to the MITRE ATT&CK tactic (e.g. TA0001 Initial Access, TA0006 Credential Access, TA0004 Privilege Escalation, TA0008 Lateral Movement, TA0009 Collection, TA0010 Exfiltration, TA0011 Command & Control, TA0040 Impact).
@@ -238,7 +238,7 @@ def ensure_state() -> None:
         st.session_state.public_chat_messages = [
             {
                 "role": "assistant",
-                "content": "Welcome to the Security Analyst Kai chat. Ask about SOC triage, MITRE ATT&CK, NIST response mapping, or this simulator.",
+                "content": "Welcome to the AI Security Analyst Kai chat. Ask about SOC triage, MITRE ATT&CK, NIST response mapping, or this simulator.",
             }
         ]
     if "public_chat_provider_status" not in st.session_state:
@@ -433,7 +433,7 @@ def render_detail_panel(threat: dict | None) -> None:
             else:
                 st.info("Threat already remediated/closed.")
     with right:
-        if st.button("Ask Security Analyst Kai", use_container_width=True):
+        if st.button("Ask AI Security Analyst Kai", use_container_width=True):
             st.session_state.kai_prefill = f"Guide triage for {threat['id']} ({threat['mitre_tactic']})"
             st.rerun()
 
@@ -477,7 +477,7 @@ def kai_response(query: str, threat: dict | None) -> str:
 
 
 def render_kai_panel(threat: dict | None) -> None:
-    st.subheader("Security Analyst Kai")
+    st.subheader("AI Security Analyst Kai")
     st.caption("SLM MENTOR · ONLINE")
     for msg in st.session_state.kai_messages[-6:]:
         role = "You" if msg["role"] == "user" else "Kai"
