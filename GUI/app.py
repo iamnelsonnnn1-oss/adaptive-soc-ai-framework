@@ -1312,16 +1312,10 @@ def inject_simulated_attack(include_ai_driven: bool | None = None) -> None:
 def run_automation_cycle() -> None:
     current_epoch = now_epoch()
     if st.session_state.auto_attack_enabled:
-        if st.session_state.auto_attack_first_wave_pending:
-            if current_epoch - st.session_state.auto_attack_first_wave_epoch >= 12:
-                inject_simulated_attack(include_ai_driven=st.session_state.auto_attack_include_ai)
-                st.session_state.auto_attack_first_wave_pending = False
-                st.session_state.last_auto_attack_epoch = current_epoch
-        else:
-            interval_sec = int(st.session_state.auto_attack_interval_min) * 60
-            if current_epoch - st.session_state.last_auto_attack_epoch >= interval_sec:
-                inject_simulated_attack(include_ai_driven=st.session_state.auto_attack_include_ai)
-                st.session_state.last_auto_attack_epoch = current_epoch
+        interval_sec = int(st.session_state.auto_attack_interval_min) * 60
+        if current_epoch - st.session_state.last_auto_attack_epoch >= interval_sec:
+            inject_simulated_attack(include_ai_driven=st.session_state.auto_attack_include_ai)
+            st.session_state.last_auto_attack_epoch = current_epoch
 
     if st.session_state.auto_move_map and current_epoch - st.session_state.last_auto_move_epoch >= 20:
         moved = move_threat_positions()
@@ -1329,29 +1323,16 @@ def run_automation_cycle() -> None:
         st.session_state.last_map_move_message = f"Auto-move shifted {moved} active threats."
 
 
+@st.fragment(run_every="5s")
 def render_automation_refresh_driver() -> None:
-    intervals = []
-    if st.session_state.auto_attack_enabled:
-        if st.session_state.auto_attack_first_wave_pending:
-            intervals.append(5)
-        else:
-            intervals.append(int(st.session_state.auto_attack_interval_min) * 60)
-    if st.session_state.auto_move_map:
-        intervals.append(20)
-    if not intervals:
+    if not (st.session_state.auto_attack_enabled or st.session_state.auto_move_map):
         return
-    refresh_seconds = max(5, min(intervals))
-    components.html(
-        (
-            "<script>"
-            "setTimeout(function () {"
-            "window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:rerunScript' }, '*');"
-            f"}}, {refresh_seconds * 1000});"
-            "</script>"
-        ),
-        height=0,
-    )
-    st.caption(f"Live simulation automation enabled · auto-refresh every {refresh_seconds} seconds.")
+    before_count = len(st.session_state.threats)
+    run_automation_cycle()
+    after_count = len(st.session_state.threats)
+    st.caption("Live simulation automation running.")
+    if st.session_state.auto_move_map or after_count != before_count:
+        st.rerun()
 
 
 def render_sidebar() -> None:
@@ -1386,17 +1367,17 @@ def render_sidebar() -> None:
         if st.session_state.auto_attack_enabled and not previous_enabled:
             st.session_state.threats = []
             st.session_state.selected_threat_id = None
-            st.session_state.auto_attack_first_wave_pending = True
-            st.session_state.auto_attack_first_wave_epoch = now_epoch()
+            inject_simulated_attack(include_ai_driven=st.session_state.auto_attack_include_ai)
+            st.session_state.auto_attack_first_wave_pending = False
             st.session_state.last_auto_attack_epoch = now_epoch()
-            st.session_state.last_map_move_message = "Auto incoming attacks armed. First alert expected within 15 seconds."
+            st.session_state.last_map_move_message = "Auto incoming attacks armed. First alert injected."
+            st.rerun()
         if not st.session_state.auto_attack_enabled and previous_enabled:
             st.session_state.auto_attack_first_wave_pending = False
 
 
 def render_dashboard() -> None:
     inject_css()
-    run_automation_cycle()
     threats = st.session_state.threats
     render_header(threats)
     render_sidebar()
