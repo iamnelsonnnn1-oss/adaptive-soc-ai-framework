@@ -522,19 +522,18 @@ def calc_mttr_minutes(threats: list[dict]) -> int:
     return int(sum(resolved) / len(resolved)) if resolved else 0
 
 
-def get_emergency_level_label(threats: list[dict]) -> str:
-    critical_open = sum(1 for t in threats if t["severity"] == "critical" and t["status"] not in {"remediated", "closed"})
-    if critical_open >= 3:
-        return "SOC Emergency Level 1"
-    if critical_open == 2:
-        return "SOC Emergency Level 2"
-    if critical_open == 1:
-        return "SOC Emergency Level 3"
-    return "SOC Emergency Level 4"
+def get_soc_emergency_index(threats: list[dict]) -> int:
+    score_map = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
+    score = 0
+    for threat in threats:
+        if threat["status"] in {"remediated", "closed"}:
+            continue
+        score += score_map.get(threat["severity"], 0)
+    return score
 
 
 def render_header(threats: list[dict]) -> None:
-    emergency_level = get_emergency_level_label(threats)
+    emergency_index = get_soc_emergency_index(threats)
     incoming_count = sum(1 for t in threats if t["status"] not in {"remediated", "closed"})
     logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
     logo_html = '<div style="font-weight:800;font-size:18px;color:#22d3ee;">SECUREX COMMAND</div>'
@@ -557,7 +556,7 @@ def render_header(threats: list[dict]) -> None:
                         <span class="alert-beacon-dot"></span>
                         <span class="alert-beacon-text">Incoming alerts: {incoming_count}</span>
                     </span>
-                    <span class="chip" style="background:#1e293b;color:#f59e0b;border:1px solid #f59e0b;">{emergency_level}</span>
+                    <span class="chip" style="background:#1e293b;color:#f59e0b;border:1px solid #f59e0b;">SOC Emergency Index: {emergency_index}</span>
                     <span class="range-beacon-wrap">
                         <span class="range-beacon-dot"></span>
                         <span class="range-beacon-text">Cyber Range · Live</span>
@@ -1323,16 +1322,27 @@ def run_automation_cycle() -> None:
         st.session_state.last_map_move_message = f"Auto-move shifted {moved} active threats."
 
 
-@st.fragment(run_every="5s")
 def render_automation_refresh_driver() -> None:
     if not (st.session_state.auto_attack_enabled or st.session_state.auto_move_map):
         return
-    before_count = len(st.session_state.threats)
-    run_automation_cycle()
-    after_count = len(st.session_state.threats)
-    st.caption("Live simulation automation running.")
-    if st.session_state.auto_move_map or after_count != before_count:
-        st.rerun()
+    refresh_seconds = 5
+    components.html(
+        (
+            "<script>"
+            "setTimeout(function () {"
+            "window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:rerunScript' }, '*');"
+            f"}}, {refresh_seconds * 1000});"
+            "</script>"
+        ),
+        height=0,
+    )
+    if st.session_state.auto_attack_enabled:
+        interval_sec = int(st.session_state.auto_attack_interval_min) * 60
+        elapsed = max(0, int(now_epoch() - st.session_state.last_auto_attack_epoch))
+        eta = max(0, interval_sec - elapsed)
+        st.caption(f"Live simulation running · next attack ETA: {eta}s")
+    else:
+        st.caption("Live simulation running.")
 
 
 def render_sidebar() -> None:
@@ -1378,6 +1388,7 @@ def render_sidebar() -> None:
 
 def render_dashboard() -> None:
     inject_css()
+    run_automation_cycle()
     threats = st.session_state.threats
     render_header(threats)
     render_sidebar()
