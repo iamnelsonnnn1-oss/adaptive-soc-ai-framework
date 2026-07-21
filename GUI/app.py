@@ -7,6 +7,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from google import genai
+from google.genai import errors as genai_errors
 
 
 st.set_page_config(page_title="SecureX Command SOC Simulator", page_icon="🛡️", layout="wide")
@@ -52,6 +54,19 @@ STACK = [
     ("ELK Stack", "SIEM"),
     ("Google SecOps", "SIEM"),
 ]
+
+
+def _safe_secret(name: str):
+    try:
+        return st.secrets.get(name)
+    except FileNotFoundError:
+        return None
+
+
+def _get_gemini_settings() -> tuple[str | None, str]:
+    api_key = _safe_secret("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    model = _safe_secret("GEMINI_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-1.5-flash"
+    return api_key, model
 
 
 def inject_css() -> None:
@@ -188,6 +203,13 @@ def ensure_state() -> None:
         st.session_state.active_dashboard_tab = "Command Overview"
     if "escalation_log" not in st.session_state:
         st.session_state.escalation_log = []
+    if "public_chat_messages" not in st.session_state:
+        st.session_state.public_chat_messages = [
+            {
+                "role": "assistant",
+                "content": "Welcome to SecureX public AI chat. Ask about SOC triage, MITRE ATT&CK, NIST response mapping, or this simulator.",
+            }
+        ]
 
 
 def get_filtered_sorted_threats() -> list[dict]:
@@ -196,7 +218,7 @@ def get_filtered_sorted_threats() -> list[dict]:
         subset = all_threats
     else:
         subset = [t for t in all_threats if t["severity"] == st.session_state.feed_filter]
-    return sorted(subset, key=lambda t: t["detected_at"], reverse=True)
+    return sorted(subset, key=lambda t: t["detected_at"], reverse=False)
 
 
 def get_selected_threat() -> dict | None:
@@ -274,6 +296,7 @@ def render_stats_bar(threats: list[dict]) -> None:
 
 def render_feed(threats: list[dict]) -> None:
     st.subheader("Live Threat Feed")
+    st.caption("Chronological order: oldest incidents to newest incidents.")
     filter_choice = st.radio("Filter", ["all", "critical", "high", "medium", "low"], horizontal=True, index=["all", "critical", "high", "medium", "low"].index(st.session_state.feed_filter))
     st.session_state.feed_filter = filter_choice
     feed_threats = get_filtered_sorted_threats()
@@ -285,6 +308,7 @@ def render_feed(threats: list[dict]) -> None:
         [
             {
                 "ID": threat["id"],
+                "Detected At": threat["detected_at"].replace("T", " ").replace("+00:00", " UTC"),
                 "Severity": threat["severity"],
                 "Status": threat["status"],
                 "Title": threat["title"],
@@ -394,8 +418,95 @@ def render_kai_panel(threat: dict | None) -> None:
         st.rerun()
 
 
+def _fallback_public_chat_response(prompt: str, threat: dict | None) -> str:
+    context = ""
+    if threat:
+        context = (
+            f"\nSelected incident context:\n"
+            f"- Case: {threat['id']} ({threat['severity']})\n"
+            f"- Tactic: {threat['mitre_tactic']}\n"
+            f"- Target: {threat['target_asset']}\n"
+        )
+    return (
+        "I can help with SOC training guidance right now."
+        f"{context}\n"
+        "Recommended structure:\n"
+        "1. Classify threat type and ATT&CK tactic.\n"
+        "2. Confirm business impact and blast radius.\n"
+        "3. Map actions to NIST CSF.\n"
+        "4. Execute containment, remediation, and post-incident hardening.\n"
+        f"\nYour question: {prompt}"
+    )
+
+
+def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
+    api_key, model = _get_gemini_settings()
+    if not api_key:
+        return _fallback_public_chat_response(prompt, threat)
+
+    context = "No specific incident selected."
+    if threat:
+        context = (
+            f"Case={threat['id']}, Severity={threat['severity']}, "
+            f"Tactic={threat['mitre_tactic']}, Target={threat['target_asset']}, Status={threat['status']}"
+        )
+    full_prompt = (
+        "You are AI Security Analyst Kai for the SecureX Command public SOC simulator. "
+        "Be concise, tactical, and educational. Provide practical SOC guidance. "
+        "When relevant, include MITRE ATT&CK and NIST CSF mapping.\n"
+        f"Context: {context}\n"
+        f"User question: {prompt}"
+    )
+    client = genai.Client(api_key=api_key)
+    try:
+        response = client.models.generate_content(model=model, contents=full_prompt)
+        if response and getattr(response, "text", None):
+            return response.text
+        return "Gemini returned an empty response. Please retry."
+    except (
+        genai_errors.APIError,
+        genai_errors.ClientError,
+        genai_errors.ServerError,
+        genai_errors.UnknownApiResponseError,
+    ) as exc:
+        return f"Gemini API error: {exc}"
+
+
+def render_public_chat(threat: dict | None) -> None:
+    st.subheader("Public AI Chat")
+    api_key, model = _get_gemini_settings()
+    st.caption(f"Provider: {'Gemini' if api_key else 'Local fallback'} · Model: {model if api_key else 'Rule-based'}")
+
+    for msg in st.session_state.public_chat_messages[-8:]:
+        speaker = "You" if msg["role"] == "user" else "Kai"
+        st.markdown(f"**{speaker}:** {msg['content']}")
+
+    with st.form("public_chat_form", clear_on_submit=True):
+        question = st.text_input("Ask a question", placeholder="How should I triage credential stuffing attacks?")
+        sent = st.form_submit_button("Send", use_container_width=True)
+
+    if sent and question.strip():
+        st.session_state.public_chat_messages.append({"role": "user", "content": question.strip()})
+        reply = _gemini_public_chat_response(question.strip(), threat)
+        st.session_state.public_chat_messages.append({"role": "assistant", "content": reply})
+        st.rerun()
+
+
 def _workflow_key(threat_id: str, suffix: str) -> str:
     return f"wf_{suffix}_{threat_id}"
+
+
+def _tactic_code(tactic_name: str) -> str:
+    for code, name in TACTICS:
+        if name == tactic_name:
+            return code
+    return ""
+
+
+def _is_ai_related_threat(threat: dict) -> bool:
+    title = threat.get("title", "").lower()
+    category = threat.get("category", "")
+    return "ai" in title or "isolation forest" in title or category == "zero_day"
 
 
 def render_incident_workflow(threat: dict | None) -> None:
@@ -410,6 +521,23 @@ def render_incident_workflow(threat: dict | None) -> None:
         f"**MITRE:** {threat['mitre_tactic']} · **NIST:** {threat['nist_function'].title()}"
     )
     st.write(threat["description"])
+
+    st.markdown("#### Framework Navigator")
+    tactic_code = _tactic_code(threat["mitre_tactic"])
+    mitre_url = f"https://attack.mitre.org/tactics/{tactic_code}/" if tactic_code else "https://attack.mitre.org/tactics/"
+    nist_url = "https://www.nist.gov/cyberframework"
+    owasp_ai_url = "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    owasp_general_url = "https://owasp.org/www-project-top-ten/"
+    fw1, fw2, fw3 = st.columns(3)
+    with fw1:
+        st.link_button("Open MITRE ATT&CK", mitre_url, use_container_width=True)
+    with fw2:
+        st.link_button("Open NIST CSF", nist_url, use_container_width=True)
+    with fw3:
+        if _is_ai_related_threat(threat):
+            st.link_button("Open OWASP for AI", owasp_ai_url, use_container_width=True)
+        else:
+            st.link_button("Open OWASP Top 10", owasp_general_url, use_container_width=True)
 
     playbook_col, escalation_col = st.columns([1.2, 1.0])
     with playbook_col:
@@ -756,6 +884,8 @@ def render_sidebar() -> None:
             st.image(logo_path, width=170)
         st.caption("SecureX Command SOC Simulator")
         st.write("Portfolio demo mode: public interactive training.")
+        api_key, _ = _get_gemini_settings()
+        st.write(f"Public chatbot: {'Gemini connected' if api_key else 'Fallback mode'}")
         if st.button("Inject Simulated Attack", use_container_width=True):
             inject_simulated_attack()
             st.rerun()
@@ -767,7 +897,7 @@ def render_dashboard() -> None:
     render_header(threats)
     render_sidebar()
     render_stats_bar(threats)
-    tab_options = ["Command Overview", "Incident Workflow", "MITRE Matrix", "Security Stack"]
+    tab_options = ["Command Overview", "Incident Workflow", "Public AI Chat", "MITRE Matrix", "Security Stack"]
     current_tab = st.radio(
         "Workspace",
         tab_options,
@@ -793,6 +923,9 @@ def render_dashboard() -> None:
             render_kai_panel(selected)
             st.divider()
             render_ranking()
+    elif current_tab == "Public AI Chat":
+        selected = get_selected_threat()
+        render_public_chat(selected)
     elif current_tab == "MITRE Matrix":
         render_attack_matrix(threats)
     elif current_tab == "Security Stack":
