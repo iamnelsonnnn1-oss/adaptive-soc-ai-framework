@@ -73,7 +73,7 @@ To show the new Next.js enterprise UI inside the existing Streamlit URL, set `NE
 
 ## AI Capabilities
 
-* **AI Charlie Analyst:** A real-time SLM (Small Language Model) co-pilot that mentors students through triage playbooks.
+* **AI Security Analyst Kai:** A real-time SLM (Small Language Model) co-pilot that mentors students through triage playbooks.
 * **Generative Mentorship:** Dynamic explanations of "Why" specific remediation steps are chosen, mapped to NIST standards.
 * **Supervised Learning:** Detects known threats and categorized attack patterns.
 * **Unsupervised Learning:** Isolation Forest for behavior-based anomaly detection.
