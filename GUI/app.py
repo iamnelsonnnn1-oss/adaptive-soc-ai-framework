@@ -1003,7 +1003,28 @@ def render_geomap(threats: list[dict]) -> None:
         custom = selected_points[-1].get("customdata")
         if custom and len(custom) > 0:
             st.session_state.selected_threat_id = custom[0]
-            st.success(f"Map focus set to {custom[0]}")
+            st.session_state.active_dashboard_tab = "Incident Workflow"
+            st.rerun()
+
+    st.markdown("#### Geomap quick open")
+    st.caption("Open a mapped threat directly in Incident Workflow.")
+    for threat in threats:
+        open_col, detail_col = st.columns([0.22, 0.78])
+        with open_col:
+            if st.button(
+                f"Open {threat['id']}",
+                key=f"open_map_case_{threat['id']}",
+                use_container_width=True,
+            ):
+                st.session_state.selected_threat_id = threat["id"]
+                st.session_state.active_dashboard_tab = "Incident Workflow"
+                st.rerun()
+        with detail_col:
+            st.markdown(
+                f"**{threat['title']}**  \n"
+                f"Severity: `{threat['severity']}` · Status: `{threat['status']}` · "
+                f"Target: `{threat['target_asset']}`"
+            )
 
 
 def move_threat_positions() -> None:
