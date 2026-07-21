@@ -2,6 +2,8 @@ import json
 import os
 import random
 from datetime import datetime, timedelta, timezone
+from urllib import error as url_error
+from urllib import request as url_request
 
 import pandas as pd
 import plotly.express as px
@@ -110,6 +112,22 @@ def _get_nextjs_app_url() -> str | None:
     )
 
 
+def _probe_nextjs_url(url: str) -> tuple[bool, str]:
+    try:
+        req = url_request.Request(url, headers={"User-Agent": "securex-streamlit-bridge"})
+        with url_request.urlopen(req, timeout=8) as response:
+            status = getattr(response, "status", 200)
+            if 200 <= status < 400:
+                return True, f"Connected (HTTP {status})"
+            return False, f"Endpoint returned HTTP {status}"
+    except url_error.HTTPError as exc:
+        return False, f"HTTP {exc.code}: {exc.reason}"
+    except url_error.URLError as exc:
+        return False, f"URL error: {exc.reason}"
+    except TimeoutError:
+        return False, "Connection timed out"
+
+
 def render_nextjs_bridge() -> bool:
     nextjs_url = _get_nextjs_app_url()
     if not nextjs_url:
@@ -121,11 +139,20 @@ def render_nextjs_bridge() -> bool:
     if not nextjs_url.startswith(("http://", "https://")):
         st.error("NEXTJS_APP_URL must start with http:// or https://")
         return False
+    reachable, probe_message = _probe_nextjs_url(nextjs_url)
 
     st.markdown("## SECUREX COMMAND · Enterprise UI")
-    st.caption("Streamlit bridge mode is active. Rendering the deployed Next.js cyber range.")
-    st.link_button("Open enterprise UI in new tab", nextjs_url)
-    components.iframe(nextjs_url, height=980, scrolling=True)
+    st.caption("Streamlit bridge mode is active.")
+    if reachable:
+        st.success(f"Next.js endpoint check: {probe_message}")
+    else:
+        st.error(f"Next.js endpoint check failed: {probe_message}")
+
+    st.link_button("Open enterprise UI in new tab", nextjs_url, use_container_width=True)
+    st.caption("If your host blocks iframe embedding, use the button above (recommended).")
+
+    if reachable and st.toggle("Embed enterprise UI inside Streamlit", value=False, key="embed_nextjs_iframe"):
+        components.iframe(nextjs_url, height=980, scrolling=True)
     return True
 
 
@@ -421,6 +448,26 @@ def render_feed(threats: list[dict]) -> None:
     selected = next((t for t in feed_threats if t["id"] == st.session_state.selected_threat_id), None)
     if selected:
         st.caption(f"Selected case: {selected['id']} · click any row to open Incident Workflow.")
+
+    st.markdown("#### Quick open")
+    st.caption("Use Open to jump directly into the Incident Workflow for a case.")
+    for threat in feed_threats:
+        open_col, detail_col = st.columns([0.22, 0.78])
+        with open_col:
+            if st.button(
+                f"Open {threat['id']}",
+                key=f"open_feed_case_{threat['id']}",
+                use_container_width=True,
+            ):
+                st.session_state.selected_threat_id = threat["id"]
+                st.session_state.active_dashboard_tab = "Incident Workflow"
+                st.rerun()
+        with detail_col:
+            st.markdown(
+                f"**{threat['title']}**  \n"
+                f"Severity: `{threat['severity']}` · Status: `{threat['status']}` · "
+                f"Target: `{threat['target_asset']}`"
+            )
 
 
 def award_xp(points: int) -> None:
