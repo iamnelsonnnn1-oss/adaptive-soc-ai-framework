@@ -523,13 +523,8 @@ def calc_mttr_minutes(threats: list[dict]) -> int:
 
 
 def get_soc_emergency_index(threats: list[dict]) -> int:
-    score_map = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
-    score = 0
-    for threat in threats:
-        if threat["status"] in {"remediated", "closed"}:
-            continue
-        score += score_map.get(threat["severity"], 0)
-    return score
+    incoming_alerts = sum(1 for threat in threats if threat["status"] not in {"remediated", "closed"})
+    return incoming_alerts // 3
 
 
 def render_header(threats: list[dict]) -> None:
