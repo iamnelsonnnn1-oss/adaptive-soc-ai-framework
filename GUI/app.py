@@ -256,6 +256,10 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def now_epoch() -> float:
+    return datetime.now(timezone.utc).timestamp()
+
+
 def seed_threats() -> list[dict]:
     seeds = [
         ("Credential stuffing burst against SSO portal", "critical", "new", "credential_theft", "185.217.0.14", "auth-gateway-01", "Credential Access", 94, "detect", "Suricata"),
@@ -337,6 +341,134 @@ def ensure_state() -> None:
         st.session_state.public_chat_provider_status = (
             f"Gemini configured ({model})" if api_key else "Local fallback (no API key configured)"
         )
+    if "auto_attack_enabled" not in st.session_state:
+        st.session_state.auto_attack_enabled = False
+    if "auto_attack_interval_min" not in st.session_state:
+        st.session_state.auto_attack_interval_min = 1
+    if "auto_attack_include_ai" not in st.session_state:
+        st.session_state.auto_attack_include_ai = True
+    if "last_auto_attack_epoch" not in st.session_state:
+        st.session_state.last_auto_attack_epoch = now_epoch()
+    if "last_auto_move_epoch" not in st.session_state:
+        st.session_state.last_auto_move_epoch = now_epoch()
+    if "last_map_move_message" not in st.session_state:
+        st.session_state.last_map_move_message = ""
+    if "report_submission_log" not in st.session_state:
+        st.session_state.report_submission_log = []
+
+
+def _playbook_catalog(threat: dict) -> list[dict]:
+    tactic = threat.get("mitre_tactic", "")
+    ai_related = _is_ai_related_threat(threat)
+    playbooks = [
+        {
+            "name": "Identity Lockdown Sprint",
+            "fit_tactics": {"Credential Access", "Initial Access", "Privilege Escalation"},
+            "score": 76,
+            "steps": [
+                "Force password + token reset and revoke active sessions.",
+                "Block source IP ranges and harden MFA challenges.",
+                "Revalidate SSO and IAM audit trails.",
+            ],
+        },
+        {
+            "name": "Containment and Host Isolation",
+            "fit_tactics": {"Lateral Movement", "Command & Control", "Impact"},
+            "score": 80,
+            "steps": [
+                "Isolate impacted endpoint/segment from trust paths.",
+                "Deploy IOC blocks across EDR, firewall, and proxy.",
+                "Run rapid sweep for sibling compromise indicators.",
+            ],
+        },
+        {
+            "name": "Data Exfiltration Shutdown",
+            "fit_tactics": {"Collection", "Exfiltration"},
+            "score": 78,
+            "steps": [
+                "Freeze egress channel and rotate exposed credentials.",
+                "Preserve transfer logs and cloud object access traces.",
+                "Apply DLP and monitor for repeated extraction attempts.",
+            ],
+        },
+        {
+            "name": "Threat Hunt and Intelligence Correlation",
+            "fit_tactics": {"Initial Access", "Lateral Movement", "Command & Control"},
+            "score": 74,
+            "steps": [
+                "Pivot across SIEM telemetry for timeline confirmation.",
+                "Correlate with external CTI and ATT&CK techniques.",
+                "Promote validated indicators to shared detection content.",
+            ],
+        },
+        {
+            "name": "AI Guardrail and Model Abuse Response",
+            "fit_tactics": {"Collection", "Command & Control", "Impact"},
+            "score": 72,
+            "steps": [
+                "Quarantine suspicious prompt channels and model endpoints.",
+                "Activate prompt filtering, rate limits, and output controls.",
+                "Review model logs for poisoning or data-leak indicators.",
+            ],
+        },
+    ]
+    for item in playbooks:
+        if tactic in item["fit_tactics"]:
+            item["score"] += 14
+        if ai_related and "AI Guardrail" in item["name"]:
+            item["score"] += 18
+        if ai_related and "Threat Hunt" in item["name"]:
+            item["score"] += 8
+        item["score"] = max(1, min(100, item["score"]))
+    playbooks.sort(key=lambda x: x["score"], reverse=True)
+    return playbooks
+
+
+def render_playbook_recommendations(threat: dict, key_suffix: str) -> dict:
+    st.markdown("#### Recommended Playbooks")
+    st.info("Recommendation before selection: review threat TTPs and CTI sources first.")
+    l1, l2, l3 = st.columns(3)
+    with l1:
+        st.link_button("Review MITRE ATT&CK", "https://attack.mitre.org/", use_container_width=True)
+    with l2:
+        st.link_button("Review ATT&CK Navigator", "https://mitre-attack.github.io/attack-navigator/", use_container_width=True)
+    with l3:
+        st.link_button("Review OpenCTI", "https://www.opencti.io/", use_container_width=True)
+
+    options = _playbook_catalog(threat)
+    labels = [f"{entry['name']} ({entry['score']}%)" for entry in options]
+    selected_label = st.radio(
+        "Choose playbook",
+        labels,
+        index=0,
+        key=_workflow_key(threat["id"], f"playbook_choice_{key_suffix}"),
+    )
+    selected_entry = options[labels.index(selected_label)]
+    st.success(f"Best option right now: {options[0]['name']} ({options[0]['score']}% estimated success)")
+
+    st.markdown(f"**Selected playbook:** {selected_entry['name']} · **Estimated success:** {selected_entry['score']}%")
+    for idx, step in enumerate(selected_entry["steps"], start=1):
+        st.write(f"{idx}. {step}")
+    st.session_state[_workflow_key(threat["id"], "selected_playbook_name")] = selected_entry["name"]
+    st.session_state[_workflow_key(threat["id"], "selected_playbook_score")] = selected_entry["score"]
+    return selected_entry
+
+
+def render_case_workspace(threat: dict | None) -> None:
+    st.subheader("Case Workspace")
+    if threat is None:
+        st.info("Select a case from the feed or geomap to open the dedicated case workspace.")
+        return
+    st.markdown(
+        f"### {threat['id']} · {threat['title']}\n"
+        f"**Severity:** {threat['severity']} · **Status:** {threat['status']} · "
+        f"**MITRE:** {threat['mitre_tactic']} · **NIST:** {threat['nist_function'].title()}"
+    )
+    st.write(threat["description"])
+    render_playbook_recommendations(threat, "case_workspace")
+    if st.button("Open Incident Workflow for this case", use_container_width=True, key=_workflow_key(threat["id"], "open_workflow")):
+        st.session_state.active_dashboard_tab = "Incident Workflow"
+        st.rerun()
 
 
 def get_filtered_sorted_threats() -> list[dict]:
@@ -727,7 +859,7 @@ def _tactic_code(tactic_name: str) -> str:
 def _is_ai_related_threat(threat: dict) -> bool:
     title = threat.get("title", "").lower()
     category = threat.get("category", "")
-    return "ai" in title or "isolation forest" in title or category == "zero_day"
+    return "ai" in title or "isolation forest" in title or category == "zero_day" or category.startswith("ai_")
 
 
 def render_incident_workflow(threat: dict | None) -> None:
@@ -760,6 +892,7 @@ def render_incident_workflow(threat: dict | None) -> None:
         else:
             st.link_button("Open OWASP Top 10", owasp_general_url, use_container_width=True)
 
+    selected_playbook = render_playbook_recommendations(threat, "workflow")
     playbook_col, escalation_col = st.columns([1.2, 1.0])
     with playbook_col:
         st.markdown("#### Isolation & Remediation Playbook")
@@ -787,7 +920,7 @@ def render_incident_workflow(threat: dict | None) -> None:
         st.markdown("#### Escalation")
         escalate_to = st.selectbox(
             "Escalate to",
-            ["Tier 2 SOC", "Incident Commander", "Threat Hunting Team", "Legal & Compliance"],
+            ["SOC Tier 2", "SOC Tier 3", "Incident Command", "Threat Hunting Team", "Legal & Compliance"],
             key=_workflow_key(threat["id"], "escalate_to"),
         )
         priority = st.selectbox("Priority", ["P1", "P2", "P3"], key=_workflow_key(threat["id"], "priority"))
@@ -802,7 +935,7 @@ def render_incident_workflow(threat: dict | None) -> None:
             }
             st.session_state.escalation_log.insert(0, log)
             threat["status"] = "investigating"
-            st.success(f"{threat['id']} escalated to {escalate_to} ({priority}).")
+            st.success(f"Escalated successfully to {escalate_to} ({priority}) for case {threat['id']}.")
             st.rerun()
 
     st.markdown("#### Incident Report")
@@ -823,6 +956,7 @@ def render_incident_workflow(threat: dict | None) -> None:
     report_payload = {
         "generated_at": now_iso(),
         "threat": threat,
+        "selected_playbook": {"name": selected_playbook["name"], "score": selected_playbook["score"]},
         "report": report_text,
         "escalations": [x for x in st.session_state.escalation_log if x["threat_id"] == threat["id"]],
     }
@@ -834,6 +968,22 @@ def render_incident_workflow(threat: dict | None) -> None:
         use_container_width=True,
         key=_workflow_key(threat["id"], "download_report"),
     )
+    if st.button("Submit report to SOC escalation queue", use_container_width=True, key=_workflow_key(threat["id"], "submit_report")):
+        target = st.session_state.get(_workflow_key(threat["id"], "escalate_to"), "SOC Tier 2")
+        st.session_state.report_submission_log.insert(
+            0,
+            {
+                "time": now_iso(),
+                "threat_id": threat["id"],
+                "target": target,
+                "playbook": selected_playbook["name"],
+                "success_estimate": selected_playbook["score"],
+            },
+        )
+        st.success(
+            f"Escalated successfully to {target}. "
+            f"Report submitted with playbook '{selected_playbook['name']}' ({selected_playbook['score']}% fit)."
+        )
 
 
 def rank_from_xp(xp: int) -> tuple[str, int, int]:
@@ -1019,7 +1169,8 @@ def render_geomap(threats: list[dict]) -> None:
     controls_left, controls_right = st.columns(2)
     with controls_left:
         if st.button("Advance Attack Movement", use_container_width=True):
-            move_threat_positions()
+            moved = move_threat_positions()
+            st.session_state.last_map_move_message = f"Moved {moved} active threats on the geomap."
             st.rerun()
     with controls_right:
         st.session_state.auto_move_map = st.toggle(
@@ -1029,7 +1180,10 @@ def render_geomap(threats: list[dict]) -> None:
         )
 
     if st.session_state.auto_move_map:
-        move_threat_positions()
+        moved = move_threat_positions()
+        st.session_state.last_map_move_message = f"Auto-move shifted {moved} active threats."
+    if st.session_state.last_map_move_message:
+        st.caption(st.session_state.last_map_move_message)
 
     df = pd.DataFrame(threats)
     fig = px.scatter_geo(
@@ -1057,11 +1211,11 @@ def render_geomap(threats: list[dict]) -> None:
         custom = selected_points[-1].get("customdata")
         if custom and len(custom) > 0:
             st.session_state.selected_threat_id = custom[0]
-            st.session_state.active_dashboard_tab = "Incident Workflow"
+            st.session_state.active_dashboard_tab = "Case Workspace"
             st.rerun()
 
     st.markdown("#### Geomap quick open")
-    st.caption("Open a mapped threat directly in Incident Workflow.")
+    st.caption("Open a mapped threat directly in Case Workspace.")
     for threat in threats:
         open_col, detail_col = st.columns([0.22, 0.78])
         with open_col:
@@ -1071,7 +1225,7 @@ def render_geomap(threats: list[dict]) -> None:
                 use_container_width=True,
             ):
                 st.session_state.selected_threat_id = threat["id"]
-                st.session_state.active_dashboard_tab = "Incident Workflow"
+                st.session_state.active_dashboard_tab = "Case Workspace"
                 st.rerun()
         with detail_col:
             st.markdown(
@@ -1081,27 +1235,53 @@ def render_geomap(threats: list[dict]) -> None:
             )
 
 
-def move_threat_positions() -> None:
+def move_threat_positions() -> int:
+    moved_count = 0
     for threat in st.session_state.threats:
         if threat["status"] in {"remediated", "closed"}:
             continue
-        threat["lat"] += random.uniform(-0.12, 0.12)
-        threat["lon"] += random.uniform(-0.12, 0.12)
+        threat["lat"] = max(-85.0, min(85.0, threat["lat"] + random.uniform(-0.45, 0.45)))
+        threat["lon"] = max(-180.0, min(180.0, threat["lon"] + random.uniform(-0.45, 0.45)))
+        moved_count += 1
+    return moved_count
 
 
-def inject_simulated_attack() -> None:
+def inject_simulated_attack(include_ai_driven: bool | None = None) -> None:
+    include_ai = st.session_state.auto_attack_include_ai if include_ai_driven is None else include_ai_driven
     tactic = random.choice([name for _, name in TACTICS])
     sev = random.choices([k for k, _ in SEVERITY_WEIGHT_CHOICES], [w for _, w in SEVERITY_WEIGHT_CHOICES], k=1)[0]
+    ai_profiles = [
+        {
+            "title": "AI-driven prompt injection against SOC assistant",
+            "category": "ai_prompt_injection",
+            "target_asset": "soc-assistant-llm",
+            "mitre_tactic": "Collection",
+        },
+        {
+            "title": "AI model poisoning attempt on telemetry classifier",
+            "category": "ai_model_poisoning",
+            "target_asset": "threat-ml-pipeline",
+            "mitre_tactic": "Impact",
+        },
+        {
+            "title": "Synthetic identity deepfake campaign",
+            "category": "ai_identity_fraud",
+            "target_asset": "iam-control-plane",
+            "mitre_tactic": "Initial Access",
+        },
+    ]
+    use_ai_profile = include_ai and random.random() < 0.45
+    selected_ai_profile = random.choice(ai_profiles) if use_ai_profile else None
     threat = {
         "id": f"THR-SIM-{random.randint(1000, 9999)}",
-        "title": f"Simulated {sev.title()} event on {tactic}",
+        "title": selected_ai_profile["title"] if selected_ai_profile else f"Simulated {sev.title()} event on {tactic}",
         "description": "Synthetic attack generated for cyber range training and live triage drills.",
         "severity": sev,
         "status": "new",
-        "category": random.choice(["malware", "phishing", "lateral_movement", "zero_day"]),
+        "category": selected_ai_profile["category"] if selected_ai_profile else random.choice(["malware", "phishing", "lateral_movement", "zero_day"]),
         "source_ip": f"203.0.113.{random.randint(10, 220)}",
-        "target_asset": random.choice(["api-gateway-01", "k8s-node-03", "idp-service-02", "db-primary-01"]),
-        "mitre_tactic": tactic,
+        "target_asset": selected_ai_profile["target_asset"] if selected_ai_profile else random.choice(["api-gateway-01", "k8s-node-03", "idp-service-02", "db-primary-01"]),
+        "mitre_tactic": selected_ai_profile["mitre_tactic"] if selected_ai_profile else tactic,
         "confidence_score": random.randint(62, 97),
         "detected_at": now_iso(),
         "remediation_steps": [
@@ -1119,6 +1299,36 @@ def inject_simulated_attack() -> None:
     st.session_state.selected_threat_id = threat["id"]
 
 
+def run_automation_cycle() -> None:
+    current_epoch = now_epoch()
+    if st.session_state.auto_attack_enabled:
+        interval_sec = int(st.session_state.auto_attack_interval_min) * 60
+        if current_epoch - st.session_state.last_auto_attack_epoch >= interval_sec:
+            inject_simulated_attack(include_ai_driven=st.session_state.auto_attack_include_ai)
+            st.session_state.last_auto_attack_epoch = current_epoch
+
+    if st.session_state.auto_move_map and current_epoch - st.session_state.last_auto_move_epoch >= 20:
+        moved = move_threat_positions()
+        st.session_state.last_auto_move_epoch = current_epoch
+        st.session_state.last_map_move_message = f"Auto-move shifted {moved} active threats."
+
+
+def render_automation_refresh_driver() -> None:
+    intervals = []
+    if st.session_state.auto_attack_enabled:
+        intervals.append(int(st.session_state.auto_attack_interval_min) * 60)
+    if st.session_state.auto_move_map:
+        intervals.append(20)
+    if not intervals:
+        return
+    refresh_seconds = max(5, min(intervals))
+    components.html(
+        f"<script>setTimeout(function() {{ window.parent.location.reload(); }}, {refresh_seconds * 1000});</script>",
+        height=0,
+    )
+    st.caption(f"Live simulation automation enabled · auto-refresh every {refresh_seconds} seconds.")
+
+
 def render_sidebar() -> None:
     with st.sidebar:
         logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
@@ -1129,17 +1339,40 @@ def render_sidebar() -> None:
         api_key, _ = _get_gemini_settings()
         st.write(f"Public chatbot: {'Gemini connected' if api_key else 'Fallback mode'}")
         if st.button("Inject Simulated Attack", use_container_width=True):
-            inject_simulated_attack()
+            inject_simulated_attack(include_ai_driven=st.session_state.auto_attack_include_ai)
             st.rerun()
+        st.markdown("#### Live Attack Intake")
+        previous_enabled = st.session_state.auto_attack_enabled
+        st.session_state.auto_attack_enabled = st.toggle(
+            "Auto incoming attacks",
+            value=st.session_state.auto_attack_enabled,
+            key="auto_incoming_attacks_toggle",
+        )
+        st.session_state.auto_attack_interval_min = st.radio(
+            "Attack interval",
+            [1, 2],
+            index=0 if int(st.session_state.auto_attack_interval_min) == 1 else 1,
+            horizontal=True,
+            key="auto_attack_interval_selector",
+        )
+        st.session_state.auto_attack_include_ai = st.toggle(
+            "Include AI-driven attacks",
+            value=st.session_state.auto_attack_include_ai,
+            key="include_ai_driven_attacks_toggle",
+        )
+        if st.session_state.auto_attack_enabled and not previous_enabled:
+            st.session_state.last_auto_attack_epoch = now_epoch()
 
 
 def render_dashboard() -> None:
     inject_css()
+    run_automation_cycle()
     threats = st.session_state.threats
     render_header(threats)
     render_sidebar()
+    render_automation_refresh_driver()
     render_stats_bar(threats)
-    tab_options = ["Command Overview", "Incident Workflow", "Public AI Chat", "MITRE Matrix", "Security Stack"]
+    tab_options = ["Command Overview", "Case Workspace", "Incident Workflow", "Public AI Chat", "MITRE Matrix", "Security Stack"]
     current_tab = st.radio(
         "Workspace",
         tab_options,
@@ -1156,6 +1389,9 @@ def render_dashboard() -> None:
             render_feed(threats)
         with right:
             render_geomap(threats)
+    elif current_tab == "Case Workspace":
+        selected = get_selected_threat()
+        render_case_workspace(selected)
     elif current_tab == "Incident Workflow":
         selected = get_selected_threat()
         left, right = st.columns([1.25, 1.0])
