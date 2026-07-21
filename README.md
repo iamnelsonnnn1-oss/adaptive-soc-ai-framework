@@ -11,6 +11,33 @@ The Adaptive SOC AI Framework is a state-of-the-art, interactive **Cyber Range**
 
 This platform delivers adaptive threat detection and guided remediation using supervised learning, unsupervised behavioral analysis (**Isolation Forest**), and Large Language Model (LLM) integration.
 
+## About
+
+Adaptive SOC AI Framework is built for cybersecurity and DevSecOps professionals who want a practical, always-available environment to train incident response decisions before they are needed in production.
+
+It combines:
+
+* A live SOC simulation layer for triage, escalation, and reporting practice.
+* IaC foundations (Terraform + Ansible) so infrastructure workflows stay realistic and reproducible.
+* AI-guided coaching from Kai to help analysts connect actions to MITRE ATT&CK, NIST CSF, and operational outcomes.
+
+This is designed to feel like the platform many defenders wish they always had: fast feedback, scenario repetition, and measurable readiness.
+
+## How It Works
+
+1. **Start the simulation:** Open the dashboard and inject or auto-ingest simulated attacks.
+2. **Triage incoming alerts:** Use the Live Threat Feed, Geomap, and ATT&CK Matrix to identify what needs attention first.
+3. **Open a case workflow:** Select a case, review recommended playbooks with confidence scores, then execute containment/remediation steps.
+4. **Escalate and report:** Route cases to the right SOC tier, generate report output, and track response quality over time.
+5. **Improve readiness continuously:** Use repeated scenarios and AI coaching to build speed, consistency, and decision quality.
+
+### Value You Get
+
+* Better SOC muscle memory under pressure.
+* Clearer handoffs between detection, response, and DevSecOps operations.
+* Repeatable analyst development with measurable operational readiness signals.
+* A portfolio-grade demonstration of modern cyber range and security engineering capability.
+
 ---
 
 ## Live Demo
