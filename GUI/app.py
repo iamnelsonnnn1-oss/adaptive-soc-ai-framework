@@ -98,6 +98,16 @@ def inject_css() -> None:
           display:inline-block; width:8px; height:8px; border-radius:999px;
           background:#22c55e; margin-right:6px; box-shadow:0 0 8px #22c55e;
         }
+        .stTabs [data-baseweb="tab-list"] {
+          gap: 10px;
+          margin-bottom: 8px;
+        }
+        .stTabs [data-baseweb="tab"] {
+          border-radius: 8px;
+          border: 1px solid rgba(148,163,184,.35);
+          background: rgba(15,23,42,.65);
+          padding: 8px 12px;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -524,24 +534,32 @@ def render_dashboard() -> None:
     render_header(threats)
     render_sidebar()
     render_stats_bar(threats)
+    tab_overview, tab_triage, tab_matrix, tab_stack = st.tabs(
+        ["Command Overview", "Triage Console", "MITRE Matrix", "Security Stack"]
+    )
 
-    col_feed, col_detail, col_kai = st.columns([1.05, 1.25, 1.1])
-    with col_feed:
-        render_feed(threats)
-    selected = get_selected_threat()
-    with col_detail:
-        render_detail_panel(selected)
-        st.divider()
-        render_geomap(threats)
-    with col_kai:
-        render_kai_panel(selected)
-        st.divider()
-        render_ranking()
+    with tab_overview:
+        left, right = st.columns([1.1, 1.4])
+        with left:
+            render_feed(threats)
+        with right:
+            render_geomap(threats)
 
-    st.divider()
-    render_attack_matrix(threats)
-    st.divider()
-    render_stack_topology()
+    with tab_triage:
+        selected = get_selected_threat()
+        left, right = st.columns([1.2, 1.0])
+        with left:
+            render_detail_panel(selected)
+        with right:
+            render_kai_panel(selected)
+            st.divider()
+            render_ranking()
+
+    with tab_matrix:
+        render_attack_matrix(threats)
+
+    with tab_stack:
+        render_stack_topology()
 
 
 def main() -> None:
