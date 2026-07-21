@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 
@@ -179,6 +180,10 @@ def ensure_state() -> None:
                 "content": "Kai online. Select a threat and ask for tactical guidance; I will classify, map to NIST CSF, and provide next remediation steps.",
             }
         ]
+    if "matrix_focus" not in st.session_state:
+        st.session_state.matrix_focus = None
+    if "auto_move_map" not in st.session_state:
+        st.session_state.auto_move_map = False
 
 
 def get_filtered_sorted_threats() -> list[dict]:
@@ -401,7 +406,7 @@ def severity_weight(severity: str) -> int:
 
 
 def cell_color(score: int) -> str:
-    if score == 0:
+    if score <= 0:
         return "#1e293b"
     if score <= 4:
         return "#0ea5e9"
@@ -410,6 +415,10 @@ def cell_color(score: int) -> str:
     if score <= 12:
         return "#f97316"
     return "#ef4444"
+
+
+def _matrix_row_from_threat_id(threat_id: str) -> int:
+    return sum(ord(ch) for ch in threat_id) % 3
 
 
 def render_attack_matrix(threats: list[dict]) -> None:
@@ -427,32 +436,104 @@ def render_attack_matrix(threats: list[dict]) -> None:
         """,
         unsafe_allow_html=True,
     )
-    open_counts = {name: 0 for _, name in TACTICS}
-    resolved_counts = {name: 0 for _, name in TACTICS}
+    tactic_names = [name for _, name in TACTICS]
+    tactic_labels = [f"{code} {name}" for code, name in TACTICS]
+    y_layers = ["Layer 1", "Layer 2", "Layer 3"]
+
+    open_counts = [[0 for _ in tactic_names] for _ in range(3)]
+    resolved_counts = [[0 for _ in tactic_names] for _ in range(3)]
     for threat in threats:
         tactic = threat["mitre_tactic"]
-        if tactic not in open_counts:
+        if tactic not in tactic_names:
             continue
+        row = _matrix_row_from_threat_id(threat["id"])
+        col = TACTIC_ORDER[tactic]
         if threat["status"] in {"remediated", "closed"}:
-            resolved_counts[tactic] += 1
+            resolved_counts[row][col] += 1
         else:
-            open_counts[tactic] += severity_weight(threat["severity"])
+            open_counts[row][col] += severity_weight(threat["severity"])
 
-    headers = "".join(f"<div class='matrix-head'>{code}<br>{name}</div>" for code, name in TACTICS)
-    rows = []
+    z = []
+    text = []
+    customdata = []
     for row_index in range(3):
-        row_html = [f"<div class='matrix-label'>Layer {row_index + 1}</div>"]
-        for _, tactic in TACTICS:
-            score = open_counts[tactic]
-            techniques = TACTIC_TO_TECHNIQUES[tactic][row_index]
-            resolved = resolved_counts[tactic]
-            tooltip = f"{techniques} | signals={score} | open={score} resolved={resolved}"
-            dot = "<span class='ok-dot'></span>" if resolved > 0 else ""
-            row_html.append(
-                f"<div class='matrix-cell' title='{tooltip}' style='background:{cell_color(score)};'>{score}{dot}</div>"
+        z_row = []
+        text_row = []
+        custom_row = []
+        for col_index, tactic in enumerate(tactic_names):
+            open_score = open_counts[row_index][col_index]
+            resolved = resolved_counts[row_index][col_index]
+            z_row.append(open_score)
+            text_row.append(f"{open_score}\nR{resolved}")
+            custom_row.append(
+                [
+                    tactic,
+                    y_layers[row_index],
+                    TACTIC_TO_TECHNIQUES[tactic][row_index],
+                    open_score,
+                    resolved,
+                ]
             )
-        rows.append("".join(row_html))
-    st.markdown(f"<div class='matrix-grid'><div></div>{headers}{''.join(rows)}</div>", unsafe_allow_html=True)
+        z.append(z_row)
+        text.append(text_row)
+        customdata.append(custom_row)
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=z,
+            x=tactic_labels,
+            y=y_layers,
+            customdata=customdata,
+            text=text,
+            texttemplate="%{text}",
+            colorscale=[
+                [0.0, "#1e293b"],
+                [0.25, "#0ea5e9"],
+                [0.5, "#f59e0b"],
+                [0.75, "#f97316"],
+                [1.0, "#ef4444"],
+            ],
+            zmin=0,
+            zmax=16,
+            hovertemplate=(
+                "Tactic: %{customdata[0]}<br>"
+                "Layer: %{customdata[1]}<br>"
+                "Technique: %{customdata[2]}<br>"
+                "Signal Count: %{customdata[3]}<br>"
+                "Resolved: %{customdata[4]}<extra></extra>"
+            ),
+            showscale=False,
+        )
+    )
+    fig.update_layout(height=380, margin=dict(l=10, r=10, t=10, b=10))
+    fig.update_xaxes(tickangle=-28)
+
+    selection = st.plotly_chart(
+        fig,
+        use_container_width=True,
+        key="attack_matrix_heatmap",
+        on_select="rerun",
+        selection_mode=("points",),
+    )
+    selected_points = (selection or {}).get("selection", {}).get("points", [])
+    if selected_points:
+        point = selected_points[-1]
+        custom = point.get("customdata")
+        if custom and len(custom) >= 5:
+            st.session_state.matrix_focus = {
+                "tactic": custom[0],
+                "layer": custom[1],
+                "technique": custom[2],
+                "signal_count": custom[3],
+                "resolved": custom[4],
+            }
+
+    focus = st.session_state.get("matrix_focus")
+    if focus:
+        st.info(
+            f"Focused cell: {focus['tactic']} / {focus['layer']} · "
+            f"{focus['technique']} · signals={focus['signal_count']} · resolved={focus['resolved']}"
+        )
 
 
 def render_stack_topology() -> None:
@@ -471,6 +552,22 @@ def render_geomap(threats: list[dict]) -> None:
     if not threats:
         st.info("No active telemetry.")
         return
+
+    controls_left, controls_right = st.columns(2)
+    with controls_left:
+        if st.button("Advance Attack Movement", use_container_width=True):
+            move_threat_positions()
+            st.rerun()
+    with controls_right:
+        st.session_state.auto_move_map = st.toggle(
+            "Auto-move on refresh",
+            value=st.session_state.auto_move_map,
+            key="auto_move_toggle",
+        )
+
+    if st.session_state.auto_move_map:
+        move_threat_positions()
+
     df = pd.DataFrame(threats)
     fig = px.scatter_geo(
         df,
@@ -478,12 +575,34 @@ def render_geomap(threats: list[dict]) -> None:
         lon="lon",
         color="severity",
         hover_name="id",
-        hover_data={"title": True, "status": True, "lat": False, "lon": False},
+        hover_data={"title": True, "status": True, "mitre_tactic": True, "lat": False, "lon": False},
+        custom_data=["id", "title", "status", "mitre_tactic"],
         size=df["severity"].map(SEVERITY_SCORE),
         projection="natural earth",
     )
+    fig.update_traces(marker=dict(opacity=0.88, line=dict(width=1, color="#0f172a")))
     fig.update_layout(height=360, margin=dict(l=10, r=10, t=10, b=10))
-    st.plotly_chart(fig, use_container_width=True)
+    selection = st.plotly_chart(
+        fig,
+        use_container_width=True,
+        key="threat_geomap",
+        on_select="rerun",
+        selection_mode=("points", "box", "lasso"),
+    )
+    selected_points = (selection or {}).get("selection", {}).get("points", [])
+    if selected_points:
+        custom = selected_points[-1].get("customdata")
+        if custom and len(custom) > 0:
+            st.session_state.selected_threat_id = custom[0]
+            st.success(f"Map focus set to {custom[0]}")
+
+
+def move_threat_positions() -> None:
+    for threat in st.session_state.threats:
+        if threat["status"] in {"remediated", "closed"}:
+            continue
+        threat["lat"] += random.uniform(-0.12, 0.12)
+        threat["lon"] += random.uniform(-0.12, 0.12)
 
 
 def inject_simulated_attack() -> None:
