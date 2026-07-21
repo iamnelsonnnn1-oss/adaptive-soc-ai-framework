@@ -202,6 +202,23 @@ def inject_css() -> None:
           display:inline-block; width:8px; height:8px; border-radius:999px;
           background:#22c55e; margin-right:6px; box-shadow:0 0 8px #22c55e;
         }
+        .alert-beacon-wrap {
+          display:inline-flex; align-items:center; gap:6px; margin-right:10px;
+          padding:2px 8px; border-radius:999px;
+          border:1px solid rgba(239,68,68,.55); background: rgba(127, 29, 29, .3);
+        }
+        .alert-beacon-dot {
+          width:10px; height:10px; border-radius:999px; background:#ef4444;
+          box-shadow:0 0 0 rgba(239,68,68,.7); animation: beaconPulse 1.15s infinite;
+        }
+        .alert-beacon-text {
+          color:#fca5a5; font-size:11px; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
+        }
+        @keyframes beaconPulse {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,.8); opacity: 1; }
+          70% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(239,68,68,0); opacity: .9; }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,0); opacity: 1; }
+        }
         .stTabs [data-baseweb="tab-list"] {
           gap: 10px;
           margin-bottom: 8px;
@@ -359,6 +376,7 @@ def get_defcon(threats: list[dict]) -> str:
 
 def render_header(threats: list[dict]) -> None:
     defcon = get_defcon(threats)
+    incoming_count = sum(1 for t in threats if t["status"] not in {"remediated", "closed"})
     logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
     logo_html = '<div style="font-weight:800;font-size:18px;color:#22d3ee;">SECUREX COMMAND</div>'
     if os.path.exists(logo_path):
@@ -374,6 +392,10 @@ def render_header(threats: list[dict]) -> None:
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
                 <div>{logo_html}</div>
                 <div>
+                    <span class="alert-beacon-wrap">
+                        <span class="alert-beacon-dot"></span>
+                        <span class="alert-beacon-text">Incoming alerts: {incoming_count}</span>
+                    </span>
                     <span class="chip" style="background:#1e293b;color:#f59e0b;border:1px solid #f59e0b;">{defcon}</span>
                     <span class="chip" style="margin-left:8px;background:#1e293b;color:#a78bfa;border:1px solid #a78bfa;">CYBER RANGE · LIVE FIRE</span>
                 </div>
