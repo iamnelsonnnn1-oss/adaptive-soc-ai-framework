@@ -214,10 +214,27 @@ def inject_css() -> None:
         .alert-beacon-text {
           color:#fca5a5; font-size:11px; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
         }
+        .range-beacon-wrap {
+          display:inline-flex; align-items:center; gap:6px; margin-left:8px;
+          padding:2px 8px; border-radius:999px;
+          border:1px solid rgba(34,197,94,.55); background: rgba(20, 83, 45, .3);
+        }
+        .range-beacon-dot {
+          width:10px; height:10px; border-radius:999px; background:#22c55e;
+          box-shadow:0 0 0 rgba(34,197,94,.7); animation: rangePulse 1.15s infinite;
+        }
+        .range-beacon-text {
+          color:#86efac; font-size:11px; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
+        }
         @keyframes beaconPulse {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,.8); opacity: 1; }
           70% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(239,68,68,0); opacity: .9; }
           100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,0); opacity: 1; }
+        }
+        @keyframes rangePulse {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34,197,94,.8); opacity: 1; }
+          70% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(34,197,94,0); opacity: .9; }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34,197,94,0); opacity: 1; }
         }
         .stTabs [data-baseweb="tab-list"] {
           gap: 10px;
@@ -363,19 +380,19 @@ def calc_mttr_minutes(threats: list[dict]) -> int:
     return int(sum(resolved) / len(resolved)) if resolved else 0
 
 
-def get_defcon(threats: list[dict]) -> str:
+def get_emergency_level_label(threats: list[dict]) -> str:
     critical_open = sum(1 for t in threats if t["severity"] == "critical" and t["status"] not in {"remediated", "closed"})
     if critical_open >= 3:
-        return "DEFCON 1"
+        return "SOC Emergency Level 1"
     if critical_open == 2:
-        return "DEFCON 2"
+        return "SOC Emergency Level 2"
     if critical_open == 1:
-        return "DEFCON 3"
-    return "DEFCON 4"
+        return "SOC Emergency Level 3"
+    return "SOC Emergency Level 4"
 
 
 def render_header(threats: list[dict]) -> None:
-    defcon = get_defcon(threats)
+    emergency_level = get_emergency_level_label(threats)
     incoming_count = sum(1 for t in threats if t["status"] not in {"remediated", "closed"})
     logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
     logo_html = '<div style="font-weight:800;font-size:18px;color:#22d3ee;">SECUREX COMMAND</div>'
@@ -384,7 +401,7 @@ def render_header(threats: list[dict]) -> None:
             logo_b64 = base64.b64encode(logo_file.read()).decode("utf-8")
         logo_html = (
             f'<img src="data:image/png;base64,{logo_b64}" alt="SECUREX logo" '
-            'style="height:290px;width:auto;display:block;" />'
+            'style="height:330px;width:auto;display:block;" />'
         )
     st.markdown(
         f"""
@@ -398,8 +415,11 @@ def render_header(threats: list[dict]) -> None:
                         <span class="alert-beacon-dot"></span>
                         <span class="alert-beacon-text">Incoming alerts: {incoming_count}</span>
                     </span>
-                    <span class="chip" style="background:#1e293b;color:#f59e0b;border:1px solid #f59e0b;">{defcon}</span>
-                    <span class="chip" style="margin-left:8px;background:#1e293b;color:#a78bfa;border:1px solid #a78bfa;">CYBER RANGE · LIVE FIRE</span>
+                    <span class="chip" style="background:#1e293b;color:#f59e0b;border:1px solid #f59e0b;">{emergency_level}</span>
+                    <span class="range-beacon-wrap">
+                        <span class="range-beacon-dot"></span>
+                        <span class="range-beacon-text">Cyber Range · Live</span>
+                    </span>
                 </div>
             </div>
         </div>
