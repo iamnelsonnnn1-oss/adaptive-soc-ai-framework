@@ -1450,6 +1450,19 @@ def render_sidebar() -> None:
             "Include AI-driven attacks",
             key="include_ai_driven_attacks_toggle",
         )
+        st.markdown("#### About Me")
+        st.caption(
+            "I built this cyber range so SOC and DevSecOps professionals can practice realistic detection, "
+            "triage, escalation, and reporting in one always-available environment."
+        )
+        with st.expander("How It Works Tutorial", expanded=False):
+            st.markdown(
+                "1. Enable **Auto incoming attacks**.\n"
+                "2. Triage alerts in the **Live Threat Feed**, **Geomap**, and **MITRE Matrix**.\n"
+                "3. Open a case and follow the recommended playbook.\n"
+                "4. Escalate to SOC Tier 2/3 and submit your report.\n"
+                "5. Repeat scenarios to improve operational readiness."
+            )
         st.session_state.auto_attack_enabled = auto_attack_enabled
         st.session_state.auto_attack_interval_min = int(auto_attack_interval_min)
         st.session_state.auto_attack_include_ai = auto_attack_include_ai
