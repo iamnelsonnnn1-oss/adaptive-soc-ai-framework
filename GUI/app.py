@@ -1335,7 +1335,7 @@ def render_sidebar() -> None:
         if os.path.exists(logo_path):
             st.image(logo_path, width=170)
         st.caption("SecureX Command SOC Simulator")
-        st.write("Portfolio demo mode: public interactive training.")
+        st.write("Live SOC cyber range for interactive analyst training.")
         api_key, _ = _get_gemini_settings()
         st.write(f"Public chatbot: {'Gemini connected' if api_key else 'Fallback mode'}")
         if st.button("Inject Simulated Attack", use_container_width=True):
