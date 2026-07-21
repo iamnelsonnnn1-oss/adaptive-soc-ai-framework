@@ -1166,10 +1166,29 @@ def render_attack_matrix(threats: list[dict]) -> None:
 
     focus = st.session_state.get("matrix_focus")
     if focus:
+        matches = _matching_cases_for_focus(threats, focus)
+        tactic_code = _tactic_code(focus["tactic"])
+        mitre_tactic_url = f"https://attack.mitre.org/tactics/{tactic_code}/" if tactic_code else "https://attack.mitre.org/tactics/"
         st.info(
             f"Focused cell: {focus['tactic']} / {focus['layer']} · "
             f"{focus['technique']} · signals={focus['signal_count']} · resolved={focus['resolved']}"
         )
+        c1, c2 = st.columns(2)
+        with c1:
+            st.link_button("Open MITRE ATT&CK tactic", mitre_tactic_url, use_container_width=True)
+        with c2:
+            if matches:
+                best = matches[0]
+                if st.button(
+                    f"Open best case {best['id']}",
+                    key=f"matrix_inline_best_{best['id']}",
+                    use_container_width=True,
+                ):
+                    st.session_state.selected_threat_id = best["id"]
+                    st.session_state.active_dashboard_tab = "Incident Workflow"
+                    st.rerun()
+            else:
+                st.button("Open best case (no match yet)", disabled=True, use_container_width=True)
         focus_key = f"{focus['tactic']}_{focus['layer']}".replace(" ", "_").replace("&", "and")
         with st.popover("Explain selected matrix cell and open a case", use_container_width=True):
             st.markdown("#### Cell explanation")
@@ -1182,7 +1201,6 @@ def render_attack_matrix(threats: list[dict]) -> None:
                 "Recommended triage flow: validate signal quality, isolate impacted identity/asset, "
                 "and confirm containment evidence before closing."
             )
-            matches = _matching_cases_for_focus(threats, focus)
             if not matches:
                 st.warning("No linked case is available for this tactic yet.")
             else:
