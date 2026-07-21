@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ThreatIntelItem } from "@/lib/types";
 
@@ -19,10 +20,12 @@ export function ThreatIntel({ intel }: ThreatIntelProps) {
               <span className="text-xs text-slate-400">Confidence {item.confidence}%</span>
             </div>
             <p className="text-sm text-slate-200">{item.summary}</p>
+            <a href={item.referenceUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex">
+              <Button variant="outline" size="sm">Open source brief</Button>
+            </a>
           </div>
         ))}
       </CardContent>
     </Card>
   );
 }
-

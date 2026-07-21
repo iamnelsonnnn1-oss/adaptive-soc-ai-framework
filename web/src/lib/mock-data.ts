@@ -74,9 +74,27 @@ export const mockThreats: Threat[] = [
 ];
 
 export const mockThreatIntel: ThreatIntelItem[] = [
-  { id: "INT-1", source: "CISA Advisory", summary: "Active exploitation of identity provider vulnerabilities.", confidence: 92 },
-  { id: "INT-2", source: "MITRE CTI", summary: "Increased abuse of OAuth token theft in phishing clusters.", confidence: 84 },
-  { id: "INT-3", source: "Vendor SOC Feed", summary: "Ransomware affiliates pivoting with SMB spray-and-pray tactics.", confidence: 81 },
+  {
+    id: "INT-1",
+    source: "CISA Advisory",
+    summary: "Active exploitation of identity provider vulnerabilities.",
+    confidence: 92,
+    referenceUrl: "https://www.cisa.gov/news-events/cybersecurity-advisories",
+  },
+  {
+    id: "INT-2",
+    source: "MITRE CTI",
+    summary: "Increased abuse of OAuth token theft in phishing clusters.",
+    confidence: 84,
+    referenceUrl: "https://attack.mitre.org/",
+  },
+  {
+    id: "INT-3",
+    source: "Vendor SOC Feed",
+    summary: "Ransomware affiliates pivoting with SMB spray-and-pray tactics.",
+    confidence: 81,
+    referenceUrl: "https://www.cisa.gov/stopransomware",
+  },
 ];
 
 export const mockAssets: Asset[] = [
@@ -101,4 +119,3 @@ export const rankTiers: RankTier[] = [
   { name: "Incident Commander", minXp: 1500 },
   { name: "Digital Sovereign", minXp: 3000 },
 ];
-

@@ -114,6 +114,13 @@ def render_nextjs_bridge() -> bool:
     nextjs_url = _get_nextjs_app_url()
     if not nextjs_url:
         return False
+    if "your-vercel-url" in nextjs_url:
+        st.error("NEXTJS_APP_URL is still a placeholder. Set it to your real deployed Next.js URL.")
+        st.caption("Example: https://adaptive-soc-ai-framework.vercel.app")
+        return False
+    if not nextjs_url.startswith(("http://", "https://")):
+        st.error("NEXTJS_APP_URL must start with http:// or https://")
+        return False
 
     st.markdown("## SECUREX COMMAND · Enterprise UI")
     st.caption("Streamlit bridge mode is active. Rendering the deployed Next.js cyber range.")

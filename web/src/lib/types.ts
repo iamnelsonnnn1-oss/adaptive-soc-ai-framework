@@ -22,6 +22,7 @@ export interface ThreatIntelItem {
   source: string;
   summary: string;
   confidence: number;
+  referenceUrl: string;
 }
 
 export interface Asset {
@@ -43,4 +44,3 @@ export interface RankTier {
   name: "Sentinel Initiate" | "Threat Analyst" | "SOC Operator" | "Incident Commander" | "Digital Sovereign";
   minXp: number;
 }
-
