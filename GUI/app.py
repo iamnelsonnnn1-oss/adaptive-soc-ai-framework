@@ -241,6 +241,11 @@ def ensure_state() -> None:
                 "content": "Welcome to SecureX public AI chat. Ask about SOC triage, MITRE ATT&CK, NIST response mapping, or this simulator.",
             }
         ]
+    if "public_chat_provider_status" not in st.session_state:
+        api_key, model = _get_gemini_settings()
+        st.session_state.public_chat_provider_status = (
+            f"Gemini configured ({model})" if api_key else "Local fallback (no API key configured)"
+        )
 
 
 def get_filtered_sorted_threats() -> list[dict]:
@@ -489,6 +494,13 @@ def render_kai_panel(threat: dict | None) -> None:
 
 
 def _fallback_public_chat_response(prompt: str, threat: dict | None) -> str:
+    prompt_l = prompt.lower().strip()
+    if prompt_l in {"live", "live?", "are you working", "are you working now", "are you working now?"}:
+        return (
+            "Yes — Kai is online in fallback mode right now.\n\n"
+            "I can still guide triage with MITRE + NIST mapping while Gemini is unavailable."
+        )
+
     if "threat landscape" in prompt.lower() or "active threats" in prompt.lower():
         return (
             "### Active Threat Landscape\n"
@@ -496,30 +508,13 @@ def _fallback_public_chat_response(prompt: str, threat: dict | None) -> str:
             "### Analyst Growth Tip\n"
             "- Build a repeatable triage sequence: classify, contain, validate, and document."
         )
-
-    context = ""
-    if threat:
-        context = (
-            f"\nSelected incident context:\n"
-            f"- Case: {threat['id']} ({threat['severity']})\n"
-            f"- Tactic: {threat['mitre_tactic']}\n"
-            f"- Target: {threat['target_asset']}\n"
-        )
-    return (
-        "I can help with SOC training guidance right now."
-        f"{context}\n"
-        "Recommended structure:\n"
-        "1. Classify threat type and ATT&CK tactic.\n"
-        "2. Confirm business impact and blast radius.\n"
-        "3. Map actions to NIST CSF.\n"
-        "4. Execute containment, remediation, and post-incident hardening.\n"
-        f"\nYour question: {prompt}"
-    )
+    return kai_response(prompt, threat)
 
 
 def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
     api_key, model = _get_gemini_settings()
     if not api_key:
+        st.session_state.public_chat_provider_status = "Local fallback (no API key configured)"
         return _fallback_public_chat_response(prompt, threat)
 
     context = "No specific incident selected."
@@ -541,6 +536,7 @@ def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
         try:
             response = client.models.generate_content(model=candidate_model, contents=full_prompt)
             if response and getattr(response, "text", None):
+                st.session_state.public_chat_provider_status = f"Gemini live ({candidate_model})"
                 return response.text
             last_error = f"Empty response from model {candidate_model}"
         except (
@@ -553,9 +549,11 @@ def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
             error_text = str(exc).lower()
             if "not found" in error_text or "is not supported" in error_text or "404" in error_text:
                 continue
+            st.session_state.public_chat_provider_status = "Local fallback (Gemini unavailable)"
             return _fallback_public_chat_response(prompt, threat)
 
     fallback_response = _fallback_public_chat_response(prompt, threat)
+    st.session_state.public_chat_provider_status = "Local fallback (Gemini model unavailable)"
     if last_error:
         return (
             f"{fallback_response}\n\n"
@@ -567,7 +565,8 @@ def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
 def render_public_chat(threat: dict | None) -> None:
     st.subheader("Public AI Chat")
     api_key, model = _get_gemini_settings()
-    st.caption(f"Provider: {'Gemini' if api_key else 'Local fallback'} · Model: {model if api_key else 'Rule-based'}")
+    status = st.session_state.get("public_chat_provider_status", "Unknown")
+    st.caption(f"Provider: {status} · Configured model: {model if api_key else 'Rule-based'}")
 
     for msg in st.session_state.public_chat_messages[-8:]:
         speaker = "You" if msg["role"] == "user" else "Kai"
