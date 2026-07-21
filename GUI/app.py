@@ -309,7 +309,7 @@ def ensure_state() -> None:
     if "xp" not in st.session_state:
         st.session_state.xp = 240
     if "threats" not in st.session_state:
-        st.session_state.threats = seed_threats()
+        st.session_state.threats = []
     if "selected_threat_id" not in st.session_state and st.session_state.threats:
         st.session_state.selected_threat_id = st.session_state.threats[0]["id"]
     if "feed_filter" not in st.session_state:
@@ -349,6 +349,10 @@ def ensure_state() -> None:
         st.session_state.auto_attack_include_ai = True
     if "last_auto_attack_epoch" not in st.session_state:
         st.session_state.last_auto_attack_epoch = now_epoch()
+    if "auto_attack_first_wave_pending" not in st.session_state:
+        st.session_state.auto_attack_first_wave_pending = False
+    if "auto_attack_first_wave_epoch" not in st.session_state:
+        st.session_state.auto_attack_first_wave_epoch = now_epoch()
     if "last_auto_move_epoch" not in st.session_state:
         st.session_state.last_auto_move_epoch = now_epoch()
     if "last_map_move_message" not in st.session_state:
@@ -1302,10 +1306,16 @@ def inject_simulated_attack(include_ai_driven: bool | None = None) -> None:
 def run_automation_cycle() -> None:
     current_epoch = now_epoch()
     if st.session_state.auto_attack_enabled:
-        interval_sec = int(st.session_state.auto_attack_interval_min) * 60
-        if current_epoch - st.session_state.last_auto_attack_epoch >= interval_sec:
-            inject_simulated_attack(include_ai_driven=st.session_state.auto_attack_include_ai)
-            st.session_state.last_auto_attack_epoch = current_epoch
+        if st.session_state.auto_attack_first_wave_pending:
+            if current_epoch - st.session_state.auto_attack_first_wave_epoch >= 12:
+                inject_simulated_attack(include_ai_driven=st.session_state.auto_attack_include_ai)
+                st.session_state.auto_attack_first_wave_pending = False
+                st.session_state.last_auto_attack_epoch = current_epoch
+        else:
+            interval_sec = int(st.session_state.auto_attack_interval_min) * 60
+            if current_epoch - st.session_state.last_auto_attack_epoch >= interval_sec:
+                inject_simulated_attack(include_ai_driven=st.session_state.auto_attack_include_ai)
+                st.session_state.last_auto_attack_epoch = current_epoch
 
     if st.session_state.auto_move_map and current_epoch - st.session_state.last_auto_move_epoch >= 20:
         moved = move_threat_positions()
@@ -1316,7 +1326,10 @@ def run_automation_cycle() -> None:
 def render_automation_refresh_driver() -> None:
     intervals = []
     if st.session_state.auto_attack_enabled:
-        intervals.append(int(st.session_state.auto_attack_interval_min) * 60)
+        if st.session_state.auto_attack_first_wave_pending:
+            intervals.append(5)
+        else:
+            intervals.append(int(st.session_state.auto_attack_interval_min) * 60)
     if st.session_state.auto_move_map:
         intervals.append(20)
     if not intervals:
@@ -1361,7 +1374,14 @@ def render_sidebar() -> None:
             key="include_ai_driven_attacks_toggle",
         )
         if st.session_state.auto_attack_enabled and not previous_enabled:
+            st.session_state.threats = []
+            st.session_state.selected_threat_id = None
+            st.session_state.auto_attack_first_wave_pending = True
+            st.session_state.auto_attack_first_wave_epoch = now_epoch()
             st.session_state.last_auto_attack_epoch = now_epoch()
+            st.session_state.last_map_move_message = "Auto incoming attacks armed. First alert expected within 15 seconds."
+        if not st.session_state.auto_attack_enabled and previous_enabled:
+            st.session_state.auto_attack_first_wave_pending = False
 
 
 def render_dashboard() -> None:
