@@ -277,26 +277,42 @@ def render_feed(threats: list[dict]) -> None:
     filter_choice = st.radio("Filter", ["all", "critical", "high", "medium", "low"], horizontal=True, index=["all", "critical", "high", "medium", "low"].index(st.session_state.feed_filter))
     st.session_state.feed_filter = filter_choice
     feed_threats = get_filtered_sorted_threats()
-    for threat in feed_threats:
-        color = SEVERITY_COLOR[threat["severity"]]
-        selected = threat["id"] == st.session_state.selected_threat_id
-        st.markdown(
-            f"""
-            <div class="feed-card" style="border-left-color:{color};{'box-shadow:0 0 0 1px #22d3ee inset;' if selected else ''}">
-                <div style="display:flex;justify-content:space-between;gap:8px;">
-                    <span class="chip" style="background:{color};color:#020617;">{threat['severity']}</span>
-                    <span class="chip" style="background:#1e293b;color:#cbd5e1;border:1px solid #475569;">{threat['status']}</span>
-                </div>
-                <div style="margin-top:6px;font-weight:700;">{threat['title']}</div>
-                <div style="font-size:12px;color:#94a3b8;">{threat['source_ip']} → {threat['target_asset']}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button(f"Open workflow · {threat['id']}", key=f"open_{threat['id']}", use_container_width=True):
-            st.session_state.selected_threat_id = threat["id"]
-            st.session_state.active_dashboard_tab = "Incident Workflow"
-            st.rerun()
+    if not feed_threats:
+        st.info("No threats match the current filter.")
+        return
+
+    table_df = pd.DataFrame(
+        [
+            {
+                "ID": threat["id"],
+                "Severity": threat["severity"],
+                "Status": threat["status"],
+                "Title": threat["title"],
+                "Source IP": threat["source_ip"],
+                "Target": threat["target_asset"],
+            }
+            for threat in feed_threats
+        ]
+    )
+    selection = st.dataframe(
+        table_df,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="live_threat_feed_table",
+    )
+    selected_rows = (selection or {}).get("selection", {}).get("rows", [])
+    if selected_rows:
+        selected_row = selected_rows[0]
+        selected_id = table_df.iloc[selected_row]["ID"]
+        st.session_state.selected_threat_id = selected_id
+        st.session_state.active_dashboard_tab = "Incident Workflow"
+        st.rerun()
+
+    selected = next((t for t in feed_threats if t["id"] == st.session_state.selected_threat_id), None)
+    if selected:
+        st.caption(f"Selected case: {selected['id']} · click any row to open Incident Workflow.")
 
 
 def award_xp(points: int) -> None:
