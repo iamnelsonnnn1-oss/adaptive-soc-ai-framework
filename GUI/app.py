@@ -389,9 +389,10 @@ def render_header(threats: list[dict]) -> None:
     st.markdown(
         f"""
         <div class="sticky-header">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-                <div>{logo_html}</div>
-                <div>
+            <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;">
+                <div></div>
+                <div style="display:flex;justify-content:center;">{logo_html}</div>
+                <div style="display:flex;justify-content:flex-end;align-items:center;">
                     <span class="alert-beacon-wrap">
                         <span class="alert-beacon-dot"></span>
                         <span class="alert-beacon-text">Incoming alerts: {incoming_count}</span>
