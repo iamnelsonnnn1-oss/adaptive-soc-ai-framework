@@ -7,9 +7,20 @@
 
 ## The Mission
 **Empowering the next generation of defenders.**
-The Adaptive SOC AI Framework is a state-of-the-art, interactive **Cyber Range** and educational SIEM platform. Our mission is to provide students and security professionals with a high-stakes, "Live Fire" simulation environment. By blending automated Infrastructure-as-Code (IaC) with a real-time AI Mentor (**AI Charlie Analyst**), we transform complex threat telemetry into a specialized digital defense learning journey from Sentinel Initiate to Digital Sovereign.
+The Adaptive SOC AI Framework is an **Operational Readiness as Code** platform: a modular cyber range where scenarios, workflows, and analyst progression are treated like versioned engineering systems.
 
-This platform delivers adaptive threat detection and guided remediation using supervised learning, unsupervised behavioral analysis (**Isolation Forest**), and Large Language Model (LLM) integration.
+Instead of a pass/fail lab, this project measures how well an analyst can investigate, contain, escalate, and communicate under pressure. It combines Infrastructure-as-Code (Terraform + Ansible), live SOC simulation, and an AI mentor (**Kai**) to build repeatable incident response muscle memory.
+
+The goal is to give learners and hiring teams a practical signal of real-world SOC readiness through gamified, mission-focused training.
+
+## Project Purpose
+
+This repository exists to:
+
+* Build a flight-simulator-style cybersecurity training environment using IaC.
+* Turn threat response into reusable playbooks and scenarios-as-code.
+* Provide guided investigation support through AI coaching and framework mapping (MITRE, NIST, OWASP).
+* Show operational growth over time through readiness signals, not binary grades.
 
 ## About
 
