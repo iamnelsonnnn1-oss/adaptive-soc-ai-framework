@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import base64
 from datetime import datetime, timedelta, timezone
 from urllib import error as url_error
 from urllib import request as url_request
@@ -358,11 +359,20 @@ def get_defcon(threats: list[dict]) -> str:
 
 def render_header(threats: list[dict]) -> None:
     defcon = get_defcon(threats)
+    logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
+    logo_html = '<div style="font-weight:800;font-size:18px;color:#22d3ee;">SECUREX COMMAND</div>'
+    if os.path.exists(logo_path):
+        with open(logo_path, "rb") as logo_file:
+            logo_b64 = base64.b64encode(logo_file.read()).decode("utf-8")
+        logo_html = (
+            f'<img src="data:image/png;base64,{logo_b64}" alt="SECUREX logo" '
+            'style="height:34px;width:auto;display:block;" />'
+        )
     st.markdown(
         f"""
         <div class="sticky-header">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-                <div style="font-weight:800;font-size:18px;color:#22d3ee;">SECUREX COMMAND · Adaptive SOC AI Framework</div>
+                <div>{logo_html}</div>
                 <div>
                     <span class="chip" style="background:#1e293b;color:#f59e0b;border:1px solid #f59e0b;">{defcon}</span>
                     <span class="chip" style="margin-left:8px;background:#1e293b;color:#a78bfa;border:1px solid #a78bfa;">CYBER RANGE · LIVE FIRE</span>
