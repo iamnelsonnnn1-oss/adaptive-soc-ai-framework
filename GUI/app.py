@@ -153,17 +153,7 @@ def seed_threats() -> list[dict]:
     return out
 
 
-def get_users() -> dict:
-    if "users" not in st.session_state:
-        st.session_state.users = {"admin@securex.local": "securex123"}
-    return st.session_state.users
-
-
 def ensure_state() -> None:
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-    if "auth_user" not in st.session_state:
-        st.session_state.auth_user = None
     if "xp" not in st.session_state:
         st.session_state.xp = 240
     if "threats" not in st.session_state:
@@ -179,61 +169,6 @@ def ensure_state() -> None:
                 "content": "Kai online. Select a threat and ask for tactical guidance; I will classify, map to NIST CSF, and provide next remediation steps.",
             }
         ]
-
-
-def render_auth() -> None:
-    st.title("SecureX Command SOC Simulator")
-    st.caption("Login required to access the cyber range dashboard.")
-    login_tab, register_tab, forgot_tab, reset_tab = st.tabs(["Login", "Register", "Forgot Password", "Reset Password"])
-    users = get_users()
-
-    with login_tab:
-        with st.form("login_form"):
-            email = st.text_input("Email")
-            pwd = st.text_input("Password", type="password")
-            submitted = st.form_submit_button("Login", use_container_width=True)
-        if submitted:
-            if users.get(email) == pwd:
-                st.session_state.authenticated = True
-                st.session_state.auth_user = email
-                st.success("Authentication successful.")
-                st.rerun()
-            else:
-                st.error("Invalid credentials.")
-
-    with register_tab:
-        with st.form("register_form"):
-            new_email = st.text_input("New email")
-            new_pwd = st.text_input("New password", type="password")
-            create = st.form_submit_button("Create account", use_container_width=True)
-        if create:
-            if not new_email or not new_pwd:
-                st.error("Email and password are required.")
-            elif new_email in users:
-                st.error("Account already exists.")
-            else:
-                users[new_email] = new_pwd
-                st.success("Account created. Use Login tab.")
-
-    with forgot_tab:
-        email = st.text_input("Account email", key="forgot_email")
-        if st.button("Send reset code", use_container_width=True, key="send_reset"):
-            if email in users:
-                st.session_state.reset_code = "SOC-2026"
-                st.info("Reset code generated for demo: SOC-2026")
-            else:
-                st.error("No account found.")
-
-    with reset_tab:
-        email = st.text_input("Account email", key="reset_email")
-        code = st.text_input("Reset code", key="reset_code_in")
-        new_pwd = st.text_input("New password", type="password", key="reset_new_pwd")
-        if st.button("Reset password", use_container_width=True, key="reset_pwd_btn"):
-            if code == st.session_state.get("reset_code") and email in users and new_pwd:
-                users[email] = new_pwd
-                st.success("Password reset complete.")
-            else:
-                st.error("Invalid reset request.")
 
 
 def get_filtered_sorted_threats() -> list[dict]:
@@ -577,13 +512,9 @@ def render_sidebar() -> None:
         if os.path.exists(logo_path):
             st.image(logo_path, width=170)
         st.caption("SecureX Command SOC Simulator")
-        st.write(f"Signed in as: **{st.session_state.auth_user}**")
+        st.write("Portfolio demo mode: public interactive training.")
         if st.button("Inject Simulated Attack", use_container_width=True):
             inject_simulated_attack()
-            st.rerun()
-        if st.button("Logout", use_container_width=True):
-            st.session_state.authenticated = False
-            st.session_state.auth_user = None
             st.rerun()
 
 
@@ -615,9 +546,6 @@ def render_dashboard() -> None:
 
 def main() -> None:
     ensure_state()
-    if not st.session_state.authenticated:
-        render_auth()
-        return
     render_dashboard()
 
 
