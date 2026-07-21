@@ -184,6 +184,10 @@ def ensure_state() -> None:
         st.session_state.matrix_focus = None
     if "auto_move_map" not in st.session_state:
         st.session_state.auto_move_map = False
+    if "active_dashboard_tab" not in st.session_state:
+        st.session_state.active_dashboard_tab = "Command Overview"
+    if "escalation_log" not in st.session_state:
+        st.session_state.escalation_log = []
 
 
 def get_filtered_sorted_threats() -> list[dict]:
@@ -289,8 +293,9 @@ def render_feed(threats: list[dict]) -> None:
             """,
             unsafe_allow_html=True,
         )
-        if st.button(f"Open {threat['id']}", key=f"open_{threat['id']}", use_container_width=True):
+        if st.button(f"Open workflow · {threat['id']}", key=f"open_{threat['id']}", use_container_width=True):
             st.session_state.selected_threat_id = threat["id"]
+            st.session_state.active_dashboard_tab = "Incident Workflow"
             st.rerun()
 
 
@@ -371,6 +376,99 @@ def render_kai_panel(threat: dict | None) -> None:
         st.session_state.kai_messages.append({"role": "user", "content": query.strip()})
         st.session_state.kai_messages.append({"role": "assistant", "content": kai_response(query.strip(), threat)})
         st.rerun()
+
+
+def _workflow_key(threat_id: str, suffix: str) -> str:
+    return f"wf_{suffix}_{threat_id}"
+
+
+def render_incident_workflow(threat: dict | None) -> None:
+    st.subheader("Incident Workflow")
+    if threat is None:
+        st.info("Select a case from the Live Threat Feed to open workflow.")
+        return
+
+    st.markdown(
+        f"### {threat['id']} · {threat['title']}\n"
+        f"**Severity:** {threat['severity']} · **Status:** {threat['status']} · "
+        f"**MITRE:** {threat['mitre_tactic']} · **NIST:** {threat['nist_function'].title()}"
+    )
+    st.write(threat["description"])
+
+    playbook_col, escalation_col = st.columns([1.2, 1.0])
+    with playbook_col:
+        st.markdown("#### Isolation & Remediation Playbook")
+        isolation_steps = [
+            "Isolate affected host/identity from production trust paths.",
+            "Block known indicators (IP/hash/domain) at perimeter and endpoint layers.",
+            "Preserve volatile and disk forensics snapshots.",
+        ]
+        for idx, step in enumerate(isolation_steps, start=1):
+            st.checkbox(step, key=_workflow_key(threat["id"], f"isolation_{idx}"))
+        for idx, step in enumerate(threat["remediation_steps"], start=1):
+            st.checkbox(step, key=_workflow_key(threat["id"], f"remediation_{idx}"))
+
+        if st.button("Complete workflow and mark remediated", use_container_width=True, key=_workflow_key(threat["id"], "complete")):
+            if threat["status"] not in {"remediated", "closed"}:
+                threat["status"] = "remediated"
+                threat["resolved_minutes"] = random.choice([11, 17, 24, 31])
+                award_xp(150)
+                st.success(f"{threat['id']} marked remediated. +150 XP")
+                st.rerun()
+            else:
+                st.info("Case already remediated/closed.")
+
+    with escalation_col:
+        st.markdown("#### Escalation")
+        escalate_to = st.selectbox(
+            "Escalate to",
+            ["Tier 2 SOC", "Incident Commander", "Threat Hunting Team", "Legal & Compliance"],
+            key=_workflow_key(threat["id"], "escalate_to"),
+        )
+        priority = st.selectbox("Priority", ["P1", "P2", "P3"], key=_workflow_key(threat["id"], "priority"))
+        reason = st.text_area("Escalation reason", key=_workflow_key(threat["id"], "reason"), height=100)
+        if st.button("Escalate case", use_container_width=True, key=_workflow_key(threat["id"], "escalate")):
+            log = {
+                "time": now_iso(),
+                "threat_id": threat["id"],
+                "to": escalate_to,
+                "priority": priority,
+                "reason": reason.strip() or "No reason supplied.",
+            }
+            st.session_state.escalation_log.insert(0, log)
+            threat["status"] = "investigating"
+            st.success(f"{threat['id']} escalated to {escalate_to} ({priority}).")
+            st.rerun()
+
+    st.markdown("#### Incident Report")
+    report_template = (
+        f"Case: {threat['id']}\n"
+        f"Title: {threat['title']}\n"
+        f"Severity: {threat['severity']}\n"
+        f"Status: {threat['status']}\n"
+        f"MITRE: {threat['mitre_tactic']}\n"
+        "Findings:\n- \nActions taken:\n- \nRecommended next actions:\n- "
+    )
+    report_text = st.text_area(
+        "Report draft",
+        value=st.session_state.get(_workflow_key(threat["id"], "report"), report_template),
+        key=_workflow_key(threat["id"], "report"),
+        height=180,
+    )
+    report_payload = {
+        "generated_at": now_iso(),
+        "threat": threat,
+        "report": report_text,
+        "escalations": [x for x in st.session_state.escalation_log if x["threat_id"] == threat["id"]],
+    }
+    st.download_button(
+        "Download incident report (JSON)",
+        data=json.dumps(report_payload, indent=2),
+        file_name=f"{threat['id']}-incident-report.json",
+        mime="application/json",
+        use_container_width=True,
+        key=_workflow_key(threat["id"], "download_report"),
+    )
 
 
 def rank_from_xp(xp: int) -> tuple[str, int, int]:
@@ -653,31 +751,35 @@ def render_dashboard() -> None:
     render_header(threats)
     render_sidebar()
     render_stats_bar(threats)
-    tab_overview, tab_triage, tab_matrix, tab_stack = st.tabs(
-        ["Command Overview", "Triage Console", "MITRE Matrix", "Security Stack"]
+    tab_options = ["Command Overview", "Incident Workflow", "MITRE Matrix", "Security Stack"]
+    current_tab = st.radio(
+        "Workspace",
+        tab_options,
+        index=tab_options.index(st.session_state.active_dashboard_tab) if st.session_state.active_dashboard_tab in tab_options else 0,
+        horizontal=True,
+        label_visibility="collapsed",
+        key="workspace_tab_selector",
     )
+    st.session_state.active_dashboard_tab = current_tab
 
-    with tab_overview:
+    if current_tab == "Command Overview":
         left, right = st.columns([1.1, 1.4])
         with left:
             render_feed(threats)
         with right:
             render_geomap(threats)
-
-    with tab_triage:
+    elif current_tab == "Incident Workflow":
         selected = get_selected_threat()
-        left, right = st.columns([1.2, 1.0])
+        left, right = st.columns([1.25, 1.0])
         with left:
-            render_detail_panel(selected)
+            render_incident_workflow(selected)
         with right:
             render_kai_panel(selected)
             st.divider()
             render_ranking()
-
-    with tab_matrix:
+    elif current_tab == "MITRE Matrix":
         render_attack_matrix(threats)
-
-    with tab_stack:
+    elif current_tab == "Security Stack":
         render_stack_topology()
 
 
