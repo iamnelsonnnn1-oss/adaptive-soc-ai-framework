@@ -78,8 +78,26 @@ def _safe_secret(name: str):
 
 def _get_gemini_settings() -> tuple[str | None, str]:
     api_key = _safe_secret("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    model = _safe_secret("GEMINI_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-1.5-flash"
+    model = _safe_secret("GEMINI_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-2.5-flash"
     return api_key, model
+
+
+def _gemini_candidate_models(preferred: str) -> list[str]:
+    candidates = [
+        preferred,
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+    ]
+    deduped = []
+    seen = set()
+    for model in candidates:
+        if model and model not in seen:
+            deduped.append(model)
+            seen.add(model)
+    return deduped
 
 
 def inject_css() -> None:
@@ -518,18 +536,32 @@ def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
         f"User question: {prompt}\n"
     )
     client = genai.Client(api_key=api_key)
-    try:
-        response = client.models.generate_content(model=model, contents=full_prompt)
-        if response and getattr(response, "text", None):
-            return response.text
-        return "Gemini returned an empty response. Please retry."
-    except (
-        genai_errors.APIError,
-        genai_errors.ClientError,
-        genai_errors.ServerError,
-        genai_errors.UnknownApiResponseError,
-    ) as exc:
-        return f"Gemini API error: {exc}"
+    last_error = None
+    for candidate_model in _gemini_candidate_models(model):
+        try:
+            response = client.models.generate_content(model=candidate_model, contents=full_prompt)
+            if response and getattr(response, "text", None):
+                return response.text
+            last_error = f"Empty response from model {candidate_model}"
+        except (
+            genai_errors.APIError,
+            genai_errors.ClientError,
+            genai_errors.ServerError,
+            genai_errors.UnknownApiResponseError,
+        ) as exc:
+            last_error = str(exc)
+            error_text = str(exc).lower()
+            if "not found" in error_text or "is not supported" in error_text or "404" in error_text:
+                continue
+            return _fallback_public_chat_response(prompt, threat)
+
+    fallback_response = _fallback_public_chat_response(prompt, threat)
+    if last_error:
+        return (
+            f"{fallback_response}\n\n"
+            f"_Gemini fallback notice: primary model unavailable ({last_error})._"
+        )
+    return fallback_response
 
 
 def render_public_chat(threat: dict | None) -> None:
