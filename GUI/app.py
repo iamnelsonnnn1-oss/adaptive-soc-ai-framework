@@ -1308,34 +1308,30 @@ def inject_simulated_attack(include_ai_driven: bool | None = None) -> None:
     st.session_state.selected_threat_id = threat["id"]
 
 
-def run_automation_cycle() -> None:
+def run_automation_cycle() -> tuple[bool, bool]:
+    attack_injected = False
+    map_moved = False
     current_epoch = now_epoch()
     if st.session_state.auto_attack_enabled:
         interval_sec = int(st.session_state.auto_attack_interval_min) * 60
         if current_epoch - st.session_state.last_auto_attack_epoch >= interval_sec:
             inject_simulated_attack(include_ai_driven=st.session_state.auto_attack_include_ai)
             st.session_state.last_auto_attack_epoch = current_epoch
+            attack_injected = True
 
     if st.session_state.auto_move_map and current_epoch - st.session_state.last_auto_move_epoch >= 20:
         moved = move_threat_positions()
         st.session_state.last_auto_move_epoch = current_epoch
         st.session_state.last_map_move_message = f"Auto-move shifted {moved} active threats."
+        map_moved = moved > 0
+    return attack_injected, map_moved
 
 
+@st.fragment(run_every="5s")
 def render_automation_refresh_driver() -> None:
     if not (st.session_state.auto_attack_enabled or st.session_state.auto_move_map):
         return
-    refresh_seconds = 5
-    components.html(
-        (
-            "<script>"
-            "setTimeout(function () {"
-            "window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:rerunScript' }, '*');"
-            f"}}, {refresh_seconds * 1000});"
-            "</script>"
-        ),
-        height=0,
-    )
+    attack_injected, map_moved = run_automation_cycle()
     if st.session_state.auto_attack_enabled:
         interval_sec = int(st.session_state.auto_attack_interval_min) * 60
         elapsed = max(0, int(now_epoch() - st.session_state.last_auto_attack_epoch))
@@ -1343,6 +1339,8 @@ def render_automation_refresh_driver() -> None:
         st.caption(f"Live simulation running · next attack ETA: {eta}s")
     else:
         st.caption("Live simulation running.")
+    if attack_injected or map_moved:
+        st.rerun()
 
 
 def render_sidebar() -> None:
@@ -1388,7 +1386,6 @@ def render_sidebar() -> None:
 
 def render_dashboard() -> None:
     inject_css()
-    run_automation_cycle()
     threats = st.session_state.threats
     render_header(threats)
     render_sidebar()
