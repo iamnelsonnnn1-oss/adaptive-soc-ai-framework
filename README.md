@@ -22,7 +22,7 @@ This repository exists to:
 * Provide guided investigation support through AI coaching and framework mapping (MITRE, NIST, OWASP).
 * Show operational growth over time through readiness signals, not binary grades.
 
-## About
+## About Me
 
 Adaptive SOC AI Framework is built for cybersecurity and DevSecOps professionals who want a practical, always-available environment to train incident response decisions before they are needed in production.
 
@@ -32,9 +32,9 @@ It combines:
 * IaC foundations (Terraform + Ansible) so infrastructure workflows stay realistic and reproducible.
 * AI-guided coaching from Kai to help analysts connect actions to MITRE ATT&CK, NIST CSF, and operational outcomes.
 
-This is designed to feel like the platform many defenders wish they always had: fast feedback, scenario repetition, and measurable readiness.
+This is designed to feel like the platform many defenders wish they always had: fast feedback, scenario repetition, and measurable readiness. I built this to mirror how real teams detect, triage, and recover during live operations.
 
-## How It Works
+## How It Works Tutorial
 
 1. **Start the simulation:** Open the dashboard and inject or auto-ingest simulated attacks.
 2. **Triage incoming alerts:** Use the Live Threat Feed, Geomap, and ATT&CK Matrix to identify what needs attention first.
