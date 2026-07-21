@@ -1043,6 +1043,20 @@ def _matrix_row_from_threat_id(threat_id: str) -> int:
     return sum(ord(ch) for ch in threat_id) % 3
 
 
+def _matching_cases_for_focus(threats: list[dict], focus: dict) -> list[dict]:
+    matches = [t for t in threats if t.get("mitre_tactic") == focus.get("tactic")]
+    active = [t for t in matches if t.get("status") not in {"remediated", "closed"}]
+    pool = active if active else matches
+    return sorted(
+        pool,
+        key=lambda t: (
+            -SEVERITY_SCORE.get(t.get("severity", "info"), 1),
+            -int(t.get("confidence_score", 0)),
+            t.get("detected_at", ""),
+        ),
+    )
+
+
 def render_attack_matrix(threats: list[dict]) -> None:
     st.subheader("MITRE ATT&CK Matrix Heatmap")
     st.markdown(
@@ -1156,6 +1170,44 @@ def render_attack_matrix(threats: list[dict]) -> None:
             f"Focused cell: {focus['tactic']} / {focus['layer']} · "
             f"{focus['technique']} · signals={focus['signal_count']} · resolved={focus['resolved']}"
         )
+        focus_key = f"{focus['tactic']}_{focus['layer']}".replace(" ", "_").replace("&", "and")
+        with st.popover("Explain selected matrix cell and open a case", use_container_width=True):
+            st.markdown("#### Cell explanation")
+            st.write(
+                f"This cell tracks **{focus['tactic']}** activity in **{focus['layer']}**. "
+                f"Technique focus is **{focus['technique']}** with signal score **{focus['signal_count']}** "
+                f"and **{focus['resolved']}** resolved events."
+            )
+            st.write(
+                "Recommended triage flow: validate signal quality, isolate impacted identity/asset, "
+                "and confirm containment evidence before closing."
+            )
+            matches = _matching_cases_for_focus(threats, focus)
+            if not matches:
+                st.warning("No linked case is available for this tactic yet.")
+            else:
+                best = matches[0]
+                st.success(
+                    f"Best case to open now: {best['id']} ({best['severity']}, confidence {best['confidence_score']}%)."
+                )
+                if st.button(
+                    f"Open best case {best['id']}",
+                    key=f"matrix_open_best_{focus_key}",
+                    use_container_width=True,
+                ):
+                    st.session_state.selected_threat_id = best["id"]
+                    st.session_state.active_dashboard_tab = "Incident Workflow"
+                    st.rerun()
+                st.caption("Or open another matching case:")
+                for case in matches[:5]:
+                    if st.button(
+                        f"Open {case['id']} · {case['title']}",
+                        key=f"matrix_open_case_{focus_key}_{case['id']}",
+                        use_container_width=True,
+                    ):
+                        st.session_state.selected_threat_id = case["id"]
+                        st.session_state.active_dashboard_tab = "Incident Workflow"
+                        st.rerun()
 
 
 def render_stack_topology() -> None:
