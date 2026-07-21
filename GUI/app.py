@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from datetime import datetime, timezone
 
@@ -7,7 +8,7 @@ import plotly.express as px
 import streamlit as st
 
 
-st.set_page_config(page_title="SECUREX COMMAND COC SIM", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="SecureX Command SOC Simulator", page_icon="🛡️", layout="wide")
 
 
 SEVERITY_SCORE = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1}
@@ -148,8 +149,12 @@ def render_queue(df: pd.DataFrame) -> None:
 
 def render_sidebar_controls(df: pd.DataFrame) -> None:
     with st.sidebar:
+        logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
+        if os.path.exists(logo_path):
+            st.image(logo_path, width=160)
+
         st.header("Simulator Control")
-        st.caption("SecureX Command COC SIM")
+        st.caption("SecureX Command SOC Simulator")
 
         if st.button("Inject Simulated Attack", use_container_width=True):
             inject_incident()
@@ -217,7 +222,11 @@ def render_activity_log() -> None:
 
 def main() -> None:
     init_state()
-    st.title("SECUREX COMMAND COC SIM")
+    logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=220)
+
+    st.title("SecureX Command SOC Simulator")
     st.caption("Interactive SOC/SIEM simulator for live triage and incident reporting.")
 
     df = pd.DataFrame(st.session_state.incidents)
