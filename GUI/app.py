@@ -3,6 +3,8 @@ import os
 import random
 import base64
 from datetime import datetime, timedelta, timezone
+from urllib import error as url_error
+from urllib import request as url_request
 
 import pandas as pd
 import plotly.express as px
@@ -111,15 +113,47 @@ def _get_nextjs_app_url() -> str | None:
     )
 
 
+def _probe_nextjs_url(url: str) -> tuple[bool, str]:
+    try:
+        req = url_request.Request(url, headers={"User-Agent": "securex-streamlit-bridge"})
+        with url_request.urlopen(req, timeout=8) as response:
+            status = getattr(response, "status", 200)
+            if 200 <= status < 400:
+                return True, f"Connected (HTTP {status})"
+            return False, f"Endpoint returned HTTP {status}"
+    except url_error.HTTPError as exc:
+        return False, f"HTTP {exc.code}: {exc.reason}"
+    except url_error.URLError as exc:
+        return False, f"URL error: {exc.reason}"
+    except TimeoutError:
+        return False, "Connection timed out"
+
+
 def render_nextjs_bridge() -> bool:
     nextjs_url = _get_nextjs_app_url()
     if not nextjs_url:
         return False
+    if "your-vercel-url" in nextjs_url:
+        st.error("NEXTJS_APP_URL is still a placeholder. Set it to your real deployed Next.js URL.")
+        st.caption("Example: https://adaptive-soc-ai-framework.vercel.app")
+        return False
+    if not nextjs_url.startswith(("http://", "https://")):
+        st.error("NEXTJS_APP_URL must start with http:// or https://")
+        return False
+    reachable, probe_message = _probe_nextjs_url(nextjs_url)
 
     st.markdown("## SECUREX COMMAND · Enterprise UI")
-    st.caption("Streamlit bridge mode is active. Rendering the deployed Next.js cyber range.")
-    st.link_button("Open enterprise UI in new tab", nextjs_url)
-    components.iframe(nextjs_url, height=980, scrolling=True)
+    st.caption("Streamlit bridge mode is active.")
+    if reachable:
+        st.success(f"Next.js endpoint check: {probe_message}")
+    else:
+        st.error(f"Next.js endpoint check failed: {probe_message}")
+
+    st.link_button("Open enterprise UI in new tab", nextjs_url, use_container_width=True)
+    st.caption("If your host blocks iframe embedding, use the button above (recommended).")
+
+    if reachable and st.toggle("Embed enterprise UI inside Streamlit", value=False, key="embed_nextjs_iframe"):
+        components.iframe(nextjs_url, height=980, scrolling=True)
     return True
 
 
@@ -167,6 +201,23 @@ def inject_css() -> None:
         .status-dot {
           display:inline-block; width:8px; height:8px; border-radius:999px;
           background:#22c55e; margin-right:6px; box-shadow:0 0 8px #22c55e;
+        }
+        .alert-beacon-wrap {
+          display:inline-flex; align-items:center; gap:6px; margin-right:10px;
+          padding:2px 8px; border-radius:999px;
+          border:1px solid rgba(239,68,68,.55); background: rgba(127, 29, 29, .3);
+        }
+        .alert-beacon-dot {
+          width:10px; height:10px; border-radius:999px; background:#ef4444;
+          box-shadow:0 0 0 rgba(239,68,68,.7); animation: beaconPulse 1.15s infinite;
+        }
+        .alert-beacon-text {
+          color:#fca5a5; font-size:11px; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
+        }
+        @keyframes beaconPulse {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,.8); opacity: 1; }
+          70% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(239,68,68,0); opacity: .9; }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,0); opacity: 1; }
         }
         .stTabs [data-baseweb="tab-list"] {
           gap: 10px;
@@ -261,9 +312,14 @@ def ensure_state() -> None:
         st.session_state.public_chat_messages = [
             {
                 "role": "assistant",
-                "content": "Welcome to SecureX public AI chat. Ask about SOC triage, MITRE ATT&CK, NIST response mapping, or this simulator.",
+                "content": "Welcome to the AI Security Analyst Kai chat. Ask about SOC triage, MITRE ATT&CK, NIST response mapping, or this simulator.",
             }
         ]
+    if "public_chat_provider_status" not in st.session_state:
+        api_key, model = _get_gemini_settings()
+        st.session_state.public_chat_provider_status = (
+            f"Gemini configured ({model})" if api_key else "Local fallback (no API key configured)"
+        )
 
 
 def get_filtered_sorted_threats() -> list[dict]:
@@ -320,6 +376,7 @@ def get_defcon(threats: list[dict]) -> str:
 
 def render_header(threats: list[dict]) -> None:
     defcon = get_defcon(threats)
+    incoming_count = sum(1 for t in threats if t["status"] not in {"remediated", "closed"})
     logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "securex.png")
     logo_html = '<div style="font-weight:800;font-size:18px;color:#22d3ee;">SECUREX COMMAND</div>'
     if os.path.exists(logo_path):
@@ -332,9 +389,15 @@ def render_header(threats: list[dict]) -> None:
     st.markdown(
         f"""
         <div class="sticky-header">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-                <div>{logo_html}</div>
-                <div>
+            <div style="position:relative;display:flex;justify-content:flex-end;align-items:center;min-height:304px;">
+                <div style="position:absolute;left:50%;top:50%;transform:translate(-50%, -50%);display:flex;justify-content:center;align-items:center;">
+                    {logo_html}
+                </div>
+                <div style="display:flex;justify-content:flex-end;align-items:center;position:relative;z-index:2;">
+                    <span class="alert-beacon-wrap">
+                        <span class="alert-beacon-dot"></span>
+                        <span class="alert-beacon-text">Incoming alerts: {incoming_count}</span>
+                    </span>
                     <span class="chip" style="background:#1e293b;color:#f59e0b;border:1px solid #f59e0b;">{defcon}</span>
                     <span class="chip" style="margin-left:8px;background:#1e293b;color:#a78bfa;border:1px solid #a78bfa;">CYBER RANGE · LIVE FIRE</span>
                 </div>
@@ -420,6 +483,26 @@ def render_feed(threats: list[dict]) -> None:
     if selected:
         st.caption(f"Selected case: {selected['id']} · click any row to open Incident Workflow.")
 
+    st.markdown("#### Quick open")
+    st.caption("Use Open to jump directly into the Incident Workflow for a case.")
+    for threat in feed_threats:
+        open_col, detail_col = st.columns([0.22, 0.78])
+        with open_col:
+            if st.button(
+                f"Open {threat['id']}",
+                key=f"open_feed_case_{threat['id']}",
+                use_container_width=True,
+            ):
+                st.session_state.selected_threat_id = threat["id"]
+                st.session_state.active_dashboard_tab = "Incident Workflow"
+                st.rerun()
+        with detail_col:
+            st.markdown(
+                f"**{threat['title']}**  \n"
+                f"Severity: `{threat['severity']}` · Status: `{threat['status']}` · "
+                f"Target: `{threat['target_asset']}`"
+            )
+
 
 def award_xp(points: int) -> None:
     st.session_state.xp += points
@@ -460,7 +543,7 @@ def render_detail_panel(threat: dict | None) -> None:
             else:
                 st.info("Threat already remediated/closed.")
     with right:
-        if st.button("Ask Analyst Kai", use_container_width=True):
+        if st.button("Ask AI Security Analyst Kai", use_container_width=True):
             st.session_state.kai_prefill = f"Guide triage for {threat['id']} ({threat['mitre_tactic']})"
             st.rerun()
 
@@ -521,6 +604,13 @@ def render_kai_panel(threat: dict | None) -> None:
 
 
 def _fallback_public_chat_response(prompt: str, threat: dict | None) -> str:
+    prompt_l = prompt.lower().strip()
+    if prompt_l in {"live", "live?", "are you working", "are you working now", "are you working now?"}:
+        return (
+            "Yes — Kai is online in fallback mode right now.\n\n"
+            "I can still guide triage with MITRE + NIST mapping while Gemini is unavailable."
+        )
+
     if "threat landscape" in prompt.lower() or "active threats" in prompt.lower():
         return (
             "### Active Threat Landscape\n"
@@ -528,30 +618,13 @@ def _fallback_public_chat_response(prompt: str, threat: dict | None) -> str:
             "### Analyst Growth Tip\n"
             "- Build a repeatable triage sequence: classify, contain, validate, and document."
         )
-
-    context = ""
-    if threat:
-        context = (
-            f"\nSelected incident context:\n"
-            f"- Case: {threat['id']} ({threat['severity']})\n"
-            f"- Tactic: {threat['mitre_tactic']}\n"
-            f"- Target: {threat['target_asset']}\n"
-        )
-    return (
-        "I can help with SOC training guidance right now."
-        f"{context}\n"
-        "Recommended structure:\n"
-        "1. Classify threat type and ATT&CK tactic.\n"
-        "2. Confirm business impact and blast radius.\n"
-        "3. Map actions to NIST CSF.\n"
-        "4. Execute containment, remediation, and post-incident hardening.\n"
-        f"\nYour question: {prompt}"
-    )
+    return kai_response(prompt, threat)
 
 
 def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
     api_key, model = _get_gemini_settings()
     if not api_key:
+        st.session_state.public_chat_provider_status = "Local fallback (no API key configured)"
         return _fallback_public_chat_response(prompt, threat)
 
     context = "No specific incident selected."
@@ -573,6 +646,7 @@ def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
         try:
             response = client.models.generate_content(model=candidate_model, contents=full_prompt)
             if response and getattr(response, "text", None):
+                st.session_state.public_chat_provider_status = f"Gemini live ({candidate_model})"
                 return response.text
             last_error = f"Empty response from model {candidate_model}"
         except (
@@ -585,9 +659,11 @@ def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
             error_text = str(exc).lower()
             if "not found" in error_text or "is not supported" in error_text or "404" in error_text:
                 continue
+            st.session_state.public_chat_provider_status = "Local fallback (Gemini unavailable)"
             return _fallback_public_chat_response(prompt, threat)
 
     fallback_response = _fallback_public_chat_response(prompt, threat)
+    st.session_state.public_chat_provider_status = "Local fallback (Gemini model unavailable)"
     if last_error:
         return (
             f"{fallback_response}\n\n"
@@ -599,7 +675,8 @@ def _gemini_public_chat_response(prompt: str, threat: dict | None) -> str:
 def render_public_chat(threat: dict | None) -> None:
     st.subheader("Public AI Chat")
     api_key, model = _get_gemini_settings()
-    st.caption(f"Provider: {'Gemini' if api_key else 'Local fallback'} · Model: {model if api_key else 'Rule-based'}")
+    status = st.session_state.get("public_chat_provider_status", "Unknown")
+    st.caption(f"Provider: {status} · Configured model: {model if api_key else 'Rule-based'}")
 
     for msg in st.session_state.public_chat_messages[-8:]:
         speaker = "You" if msg["role"] == "user" else "Kai"
