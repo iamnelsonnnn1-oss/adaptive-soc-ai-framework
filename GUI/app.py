@@ -359,6 +359,12 @@ def ensure_state() -> None:
         st.session_state.last_map_move_message = ""
     if "report_submission_log" not in st.session_state:
         st.session_state.report_submission_log = []
+    if "auto_incoming_attacks_toggle" not in st.session_state:
+        st.session_state.auto_incoming_attacks_toggle = st.session_state.auto_attack_enabled
+    if "auto_attack_interval_selector" not in st.session_state:
+        st.session_state.auto_attack_interval_selector = st.session_state.auto_attack_interval_min
+    if "include_ai_driven_attacks_toggle" not in st.session_state:
+        st.session_state.include_ai_driven_attacks_toggle = st.session_state.auto_attack_include_ai
 
 
 def _playbook_catalog(threat: dict) -> list[dict]:
@@ -1336,7 +1342,13 @@ def render_automation_refresh_driver() -> None:
         return
     refresh_seconds = max(5, min(intervals))
     components.html(
-        f"<script>setTimeout(function() {{ window.parent.location.reload(); }}, {refresh_seconds * 1000});</script>",
+        (
+            "<script>"
+            "setTimeout(function () {"
+            "window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:rerunScript' }, '*');"
+            f"}}, {refresh_seconds * 1000});"
+            "</script>"
+        ),
         height=0,
     )
     st.caption(f"Live simulation automation enabled · auto-refresh every {refresh_seconds} seconds.")
@@ -1354,23 +1366,23 @@ def render_sidebar() -> None:
             st.rerun()
         st.markdown("#### Live Attack Intake")
         previous_enabled = st.session_state.auto_attack_enabled
-        st.session_state.auto_attack_enabled = st.toggle(
+        auto_attack_enabled = st.toggle(
             "Auto incoming attacks",
-            value=st.session_state.auto_attack_enabled,
             key="auto_incoming_attacks_toggle",
         )
-        st.session_state.auto_attack_interval_min = st.radio(
+        auto_attack_interval_min = st.radio(
             "Attack interval",
             [1, 2],
-            index=0 if int(st.session_state.auto_attack_interval_min) == 1 else 1,
             horizontal=True,
             key="auto_attack_interval_selector",
         )
-        st.session_state.auto_attack_include_ai = st.toggle(
+        auto_attack_include_ai = st.toggle(
             "Include AI-driven attacks",
-            value=st.session_state.auto_attack_include_ai,
             key="include_ai_driven_attacks_toggle",
         )
+        st.session_state.auto_attack_enabled = auto_attack_enabled
+        st.session_state.auto_attack_interval_min = int(auto_attack_interval_min)
+        st.session_state.auto_attack_include_ai = auto_attack_include_ai
         if st.session_state.auto_attack_enabled and not previous_enabled:
             st.session_state.threats = []
             st.session_state.selected_threat_id = None
