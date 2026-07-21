@@ -7,6 +7,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 from google import genai
 from google.genai import errors as genai_errors
 
@@ -98,6 +99,27 @@ def _gemini_candidate_models(preferred: str) -> list[str]:
             deduped.append(model)
             seen.add(model)
     return deduped
+
+
+def _get_nextjs_app_url() -> str | None:
+    return (
+        _safe_secret("NEXTJS_APP_URL")
+        or os.getenv("NEXTJS_APP_URL")
+        or os.getenv("NEXT_APP_URL")
+        or os.getenv("WEB_APP_URL")
+    )
+
+
+def render_nextjs_bridge() -> bool:
+    nextjs_url = _get_nextjs_app_url()
+    if not nextjs_url:
+        return False
+
+    st.markdown("## SECUREX COMMAND · Enterprise UI")
+    st.caption("Streamlit bridge mode is active. Rendering the deployed Next.js cyber range.")
+    st.link_button("Open enterprise UI in new tab", nextjs_url)
+    components.iframe(nextjs_url, height=980, scrolling=True)
+    return True
 
 
 def inject_css() -> None:
@@ -1024,6 +1046,8 @@ def render_dashboard() -> None:
 
 
 def main() -> None:
+    if render_nextjs_bridge():
+        return
     ensure_state()
     render_dashboard()
 
