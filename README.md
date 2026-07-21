@@ -21,6 +21,8 @@ Explore the hosted dashboard demo here:
 
 The current dashboard is a demo-ready visual layer for the framework and will evolve from mock data to live API-backed telemetry as the platform matures.
 
+To show the new Next.js enterprise UI inside the existing Streamlit URL, set `NEXTJS_APP_URL` in Streamlit secrets to your deployed `web/` URL (for example, your Vercel production URL). When present, Streamlit switches to bridge mode and embeds that interface.
+
 ---
 
 ## Project Architecture (Visual System Topology)
