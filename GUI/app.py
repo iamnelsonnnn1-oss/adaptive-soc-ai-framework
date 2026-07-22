@@ -179,6 +179,20 @@ def inject_css() -> None:
           border: 1px solid rgba(56, 189, 248, 0.25);
           border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
           backdrop-filter: blur(3px);
+          overflow: hidden;
+        }
+        .header-shell {
+          position:relative; display:flex; justify-content:flex-end; align-items:center; min-height:304px;
+        }
+        .header-logo-center {
+          position:absolute; left:50%; top:50%; transform:translate(-50%, -50%);
+          display:flex; justify-content:center; align-items:center;
+        }
+        .securex-header-logo {
+          height: 330px; width: auto; display: block;
+        }
+        .header-right {
+          display:flex; justify-content:flex-end; align-items:center; position:relative; z-index:2; flex-wrap:wrap;
         }
         .chip { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; }
         .feed-card {
@@ -256,6 +270,24 @@ def inject_css() -> None:
           border: 1px solid rgba(148,163,184,.35);
           background: rgba(15,23,42,.65);
           padding: 8px 12px;
+        }
+        @media (max-width: 1024px) {
+          .securex-header-logo { height: 220px !important; }
+          .header-shell { min-height: 230px !important; }
+        }
+        @media (max-width: 768px) {
+          .sticky-header { padding: 8px 10px; }
+          .header-shell { min-height: 180px !important; justify-content:center !important; }
+          .header-logo-center { position: static !important; transform: none !important; }
+          .header-right {
+            width:100%; justify-content:center !important; margin-top:8px; gap:6px;
+          }
+          .securex-header-logo { height: 140px !important; }
+          .chip, .alert-beacon-text, .range-beacon-text { font-size: 10px !important; }
+        }
+        @media (max-width: 480px) {
+          .securex-header-logo { height: 110px !important; }
+          .header-shell { min-height: 140px !important; }
         }
         </style>
         """,
@@ -553,16 +585,16 @@ def render_header(threats: list[dict]) -> None:
             logo_b64 = base64.b64encode(logo_file.read()).decode("utf-8")
         logo_html = (
             f'<img src="data:image/png;base64,{logo_b64}" alt="SECUREX logo" '
-            'style="height:330px;width:auto;display:block;" />'
+            'class="securex-header-logo" />'
         )
     st.markdown(
         f"""
         <div class="sticky-header">
-            <div style="position:relative;display:flex;justify-content:flex-end;align-items:center;min-height:304px;">
-                <div style="position:absolute;left:50%;top:50%;transform:translate(-50%, -50%);display:flex;justify-content:center;align-items:center;">
+            <div class="header-shell">
+                <div class="header-logo-center">
                     {logo_html}
                 </div>
-                <div style="display:flex;justify-content:flex-end;align-items:center;position:relative;z-index:2;">
+                <div class="header-right">
                     <span class="alert-beacon-wrap">
                         <span class="alert-beacon-dot"></span>
                         <span class="alert-beacon-text">Incoming alerts: {incoming_count}</span>
@@ -658,22 +690,18 @@ def render_feed(threats: list[dict]) -> None:
     st.markdown("#### Quick open")
     st.caption("Use Open to jump directly into the Incident Workflow for a case.")
     for threat in feed_threats:
-        open_col, detail_col = st.columns([0.22, 0.78])
-        with open_col:
-            if st.button(
-                f"Open {threat['id']}",
-                key=f"open_feed_case_{threat['id']}",
-                use_container_width=True,
-            ):
-                st.session_state.selected_threat_id = threat["id"]
-                st.session_state.active_dashboard_tab = "Incident Workflow"
-                st.rerun()
-        with detail_col:
-            st.markdown(
-                f"**{threat['title']}**  \n"
-                f"Severity: `{threat['severity']}` · Status: `{threat['status']}` · "
-                f"Target: `{threat['target_asset']}`"
-            )
+        if st.button(
+            f"Open {threat['id']} · {threat['title']}",
+            key=f"open_feed_case_{threat['id']}",
+            use_container_width=True,
+        ):
+            st.session_state.selected_threat_id = threat["id"]
+            st.session_state.active_dashboard_tab = "Incident Workflow"
+            st.rerun()
+        st.caption(
+            f"Severity: {threat['severity']} · Status: {threat['status']} · "
+            f"Target: {threat['target_asset']}"
+        )
 
 
 def award_xp(points: int) -> None:
@@ -901,16 +929,12 @@ def render_incident_workflow(threat: dict | None) -> None:
     nist_url = "https://www.nist.gov/cyberframework"
     owasp_ai_url = "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     owasp_general_url = "https://owasp.org/www-project-top-ten/"
-    fw1, fw2, fw3 = st.columns(3)
-    with fw1:
-        st.link_button("Open MITRE ATT&CK", mitre_url, use_container_width=True)
-    with fw2:
-        st.link_button("Open NIST CSF", nist_url, use_container_width=True)
-    with fw3:
-        if _is_ai_related_threat(threat):
-            st.link_button("Open OWASP for AI", owasp_ai_url, use_container_width=True)
-        else:
-            st.link_button("Open OWASP Top 10", owasp_general_url, use_container_width=True)
+    st.link_button("Open MITRE ATT&CK", mitre_url, use_container_width=True)
+    st.link_button("Open NIST CSF", nist_url, use_container_width=True)
+    if _is_ai_related_threat(threat):
+        st.link_button("Open OWASP for AI", owasp_ai_url, use_container_width=True)
+    else:
+        st.link_button("Open OWASP Top 10", owasp_general_url, use_container_width=True)
 
     selected_playbook = render_playbook_recommendations(threat, "workflow")
     playbook_col, escalation_col = st.columns([1.2, 1.0])
@@ -1307,22 +1331,18 @@ def render_geomap(threats: list[dict]) -> None:
     st.markdown("#### Geomap quick open")
     st.caption("Open a mapped threat directly in Case Workspace.")
     for threat in threats:
-        open_col, detail_col = st.columns([0.22, 0.78])
-        with open_col:
-            if st.button(
-                f"Open {threat['id']}",
-                key=f"open_map_case_{threat['id']}",
-                use_container_width=True,
-            ):
-                st.session_state.selected_threat_id = threat["id"]
-                st.session_state.active_dashboard_tab = "Case Workspace"
-                st.rerun()
-        with detail_col:
-            st.markdown(
-                f"**{threat['title']}**  \n"
-                f"Severity: `{threat['severity']}` · Status: `{threat['status']}` · "
-                f"Target: `{threat['target_asset']}`"
-            )
+        if st.button(
+            f"Open {threat['id']} · {threat['title']}",
+            key=f"open_map_case_{threat['id']}",
+            use_container_width=True,
+        ):
+            st.session_state.selected_threat_id = threat["id"]
+            st.session_state.active_dashboard_tab = "Case Workspace"
+            st.rerun()
+        st.caption(
+            f"Severity: {threat['severity']} · Status: {threat['status']} · "
+            f"Target: {threat['target_asset']}"
+        )
 
 
 def move_threat_positions() -> int:
