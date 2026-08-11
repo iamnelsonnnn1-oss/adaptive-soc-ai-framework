@@ -10,6 +10,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 
+RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin appuser
+USER 10001
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD python -c "from urllib.request import urlopen; urlopen('http://127.0.0.1:8080/health').read()"
